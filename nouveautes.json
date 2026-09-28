@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-09-28",
+    "texte": "une petite bulle à côté de moi : clique dessus pour ouvrir notre discussion, « – » pour la réduire."
+  },
+  {
+    "version": "0.5.0",
+    "date": "2026-09-28",
+    "texte": "je peux modifier mon propre code quand tu me le demandes, toujours après ton accord."
+  },
+  {
     "version": "0.4.0",
     "date": "2026-09-28",
     "texte": "il se souvient de tout ce que tu lui demandes, le range par projet, et retrouve ce qu'on a fait dans tes sessions Claude Code."

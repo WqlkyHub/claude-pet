@@ -88,6 +88,8 @@ module.exports = {
           if (p && p.nom && !store.findProject(p.nom)) store.ensureProject(p.nom, p.resume || '');
         }
       },
+      // Les derniers échanges (tous projets), depuis « Nouvelle conversation ».
+      recent: (max, sinceReset = 0) => store.allExchanges().filter((e) => e.t > sinceReset).slice(-max),
       dir: () => store.dir(),
     };
 

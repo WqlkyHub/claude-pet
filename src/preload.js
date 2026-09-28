@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld('petAPI', {
   saveKey: (key) => ipcRenderer.invoke('chat:save-key', key),
   ask: (id, text) => ipcRenderer.send('chat:ask', { id, text }),
   cancelAsk: () => ipcRenderer.send('chat:cancel'),
+  chatHistory: () => ipcRenderer.invoke('chat:history'),
 });

@@ -1,5 +1,5 @@
 {
-  "maj": "2026-09-28T17:10:00Z",
+  "maj": "2026-09-28T18:45:00Z",
   "note": "Tenu à jour par Claude dans l'app (projet « Claude Pet »). Le compagnon le relit toutes les 6 heures.",
   "projets": [
     {
@@ -33,6 +33,10 @@
         {
           "date": "2026-09-28",
           "texte": "Mémoire durable rangée par projet, relecture des sessions Claude Code, import de l'export claude.ai ; 35 % plus petit ; mises à jour en un clic et historique envoyé par Claude."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Version 0.5.0 : bulle de discussion repliable à côté du pet, et atelier pour qu'il modifie son propre code sur demande, après accord de Sacha."
         }
       ]
     }

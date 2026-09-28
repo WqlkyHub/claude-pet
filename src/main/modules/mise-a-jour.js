@@ -16,12 +16,15 @@ module.exports = {
 
     async function ask(info) {
       const win = BrowserWindow.getAllWindows()[0];
+      const edits = pet.settings.get('localEdits', []);
       const list = info.nouveautes.length ? info.nouveautes.map((n) => `• ${n}`).join('\n') : 'Des améliorations.';
       const { response } = await dialog.showMessageBox(win, {
         type: 'info',
         title: 'Claude Pet demande ton accord',
         message: `Une nouvelle version de Claude Pet est prête (${info.version}). Je me mets à jour ?`,
-        detail: `Nouveautés :\n${list}\n\nÇa prend quelques secondes, puis je redémarre. Tes réglages et ma mémoire sont gardés.`,
+        detail: `Nouveautés :\n${list}\n\nÇa prend quelques secondes, puis je redémarre. Tes réglages et ma mémoire sont gardés.`
+          + (edits.length ? `\n\nAttention : les ${edits.length} modification(s) que tu m'as fait faire moi-même seront remplacées `
+            + '(demande-les à Claude dans le projet Claude Pet pour les garder pour de bon).' : ''),
         buttons: ['Mettre à jour', 'Plus tard'],
         defaultId: 0,
         cancelId: 1,
@@ -41,6 +44,7 @@ module.exports = {
       try {
         const version = await update.install((step) => pet.say(step, { duration: 20000 }));
         pet.settings.set('justUpdated', { version, nouveautes: info.nouveautes });
+        pet.settings.set('localEdits', []);
         pet.say('C\'est bon, je redémarre !', { duration: 3000 });
         setTimeout(() => { app.relaunch(); app.exit(0); }, 1500);
       } catch (err) {

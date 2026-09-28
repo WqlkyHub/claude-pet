@@ -9,6 +9,13 @@
 <body>
   <div id="bubble" class="bubble" hidden><span id="bubble-text"></span></div>
   <form id="ask" class="ask" hidden autocomplete="off"><input id="ask-input" spellcheck="false" maxlength="4000"></form>
+  <!-- La discussion : une petite bulle à côté de lui, qui s'agrandit quand tu veux lui parler. -->
+  <button id="talk-toggle" class="talk-toggle" type="button" title="Discussion" aria-label="Ouvrir la discussion"><span></span><span></span><span></span></button>
+  <section id="talk" class="talk" hidden>
+    <header><span>Discussion</span><button id="talk-close" type="button" title="Réduire" aria-label="Réduire la discussion">–</button></header>
+    <div id="talk-log" class="talk-log"></div>
+    <form id="talk-form" autocomplete="off"><input id="talk-input" spellcheck="false" maxlength="4000" placeholder="Dis-moi..."></form>
+  </section>
 
   <div id="stage">
     <div id="zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></div>

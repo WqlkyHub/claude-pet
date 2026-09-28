@@ -245,4 +245,5 @@ module.exports = {
   status,
   findClaude,
   complete,
+  run,
 };

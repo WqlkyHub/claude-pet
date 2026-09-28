@@ -26,6 +26,7 @@
 // chat.js ouvre la discussion avec Claude ; les demandes passent par
 // l'aiguilleur src/main/router.js (chat aujourd'hui, Claude Code et Cowork ensuite).
 // memoire.js garde tes demandes, rangées par projet, et relit ce que vous avez fait avant.
+// atelier.js lui permet de modifier son propre code, après ton accord.
 // activity.js suit la fenêtre active, l'inactivité et l'heure (en local).
 // Étape prévue : actions.js (lancer musique, logiciels, sites).
 
@@ -38,6 +39,7 @@ const MODULES = [
   require('./quota'),
   require('./activity'),
   require('./mise-a-jour'),
+  require('./atelier'),
 ];
 
 const cleanups = [];

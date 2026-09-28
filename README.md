@@ -76,6 +76,26 @@ discussion lui donne aussi de l'expérience.
 Par l'abonnement, le modèle est celui choisi par défaut dans ton Claude Code. Par la clé
 API, c'est Claude Opus 5 (`MODEL` en haut de `src/main/destinations/chat.js`).
 
+## La bulle de discussion
+
+À côté de lui, une petite bulle « ... ». Un clic l'agrandit en fil de discussion : vos
+derniers échanges et une ligne pour écrire. « – » la réduit. Elle reste comme tu l'as
+laissée, même après un redémarrage. Quand elle est réduite, un clic sur lui ouvre toujours
+la petite ligne rapide, et ses points s'animent quand il t'a répondu.
+
+## Il peut se modifier lui-même
+
+Demande-lui simplement (« ajoute "Miaou ?" à tes phrases », « parle moins souvent »...). Il
+copie son code dans un atelier (`%APPDATA%\claude-pet\atelier\`), Claude Code modifie
+cette copie (lire et écrire des fichiers, seulement là ; aucune commande), il vérifie que
+le code est valide, puis **te montre ce qu'il a changé et te demande ton accord**. Si tu
+acceptes, il garde une copie de sa version actuelle et redémarre.
+
+- Clic droit, **Annuler ma dernière modification** pour revenir en arrière ;
+- s'il ne redémarre plus : double-clique `tools\restaurer.cmd` ;
+- ces modifications restent sur ton PC : la prochaine mise à jour les remplace (elle te
+  prévient). Pour les garder pour de bon, demande-les aussi à Claude dans le projet.
+
 ## Sa mémoire : un mini Claude qui se souvient
 
 Le compagnon garde **tout ce que tu lui demandes**, même après un redémarrage, et le
@@ -230,6 +250,7 @@ src/
       evolution.js   expérience et formes d'évolution
       memoire.js     mémoire, rangement par projet, menu Mémoire
       mise-a-jour.js propose les mises à jour et les installe après ton accord
+      atelier.js     il modifie son propre code, après ton accord
       chat.js        discussion avec Claude, reliée à l'aiguilleur et aux humeurs
       quota.js       fatigue et évolution selon ton quota Claude
       activity.js    réactions à ce que tu fais (lunettes, casque, pause, plein écran)

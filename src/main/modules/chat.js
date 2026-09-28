@@ -104,6 +104,13 @@ module.exports = {
       return { ok: true };
     });
 
+    // Les derniers échanges, pour la bulle de discussion.
+    ipcMain.handle('chat:history', () => {
+      try {
+        return pet.memory.recent(30, resetAt()).map((e) => ({ moi: e.moi, toi: e.toi, t: e.t }));
+      } catch { return []; }
+    });
+
     ipcMain.on('chat:cancel', () => {
       if (current) current.abort();
     });
@@ -139,6 +146,8 @@ module.exports = {
           console.error('Impossible de ranger cet échange :', err);
         }
         pet.send({ type: 'chat-done', id, projet });
+        // Il doit se modifier lui-même : l'atelier prépare la modification et demande ton accord.
+        if (result.tags && result.tags.action === 'code' && pet.selfEdit) pet.selfEdit.start(text);
         pet.setMood(result.mood, 4000);
         if (result.mood === 'happy' || result.mood === 'love') pet.play('hop');
         pet.bus.emit('xp', { amount: 3, reason: 'discussions' });

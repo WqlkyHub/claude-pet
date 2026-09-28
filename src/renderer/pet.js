@@ -10,6 +10,12 @@
   const heartsEl = document.getElementById('hearts');
   const askEl = document.getElementById('ask');
   const askInput = document.getElementById('ask-input');
+  const talkToggle = document.getElementById('talk-toggle');
+  const talkEl = document.getElementById('talk');
+  const talkLog = document.getElementById('talk-log');
+  const talkInput = document.getElementById('talk-input');
+
+  const talk = { open: false, loaded: false }; // la discussion (voir plus bas)
 
   const pick = (list) => list[Math.floor(Math.random() * list.length)];
   const rand = (min, max) => min + Math.random() * (max - min);
@@ -58,6 +64,7 @@
   let bubbleTimer = null;
 
   function say(text, duration) {
+    if (talk.open) { talkLine('info', text); return; } // discussion ouverte : ça va dans le fil
     clearTimeout(bubbleTimer);
     if (chat.answering) return; // ne coupe pas une réponse de Claude
     bubbleEl.classList.remove('leaving', 'chat');
@@ -87,6 +94,7 @@
   const BASE_HEIGHT = 300;
     let lastHeight = BASE_HEIGHT;
   function fitHeight(contentHeight) {
+    if (talk.open) contentHeight = Math.max(contentHeight, talkEl.offsetHeight);
     const wanted = contentHeight ? Math.max(BASE_HEIGHT, (parseFloat(getComputedStyle(bubbleEl).bottom) || 125) + contentHeight + 24) : BASE_HEIGHT;
     if (wanted === lastHeight) return;
     lastHeight = wanted;
@@ -176,6 +184,8 @@
     const el = document.elementFromPoint(x, y);
     if (!el) return false;
     if (!askEl.hidden && askEl.contains(el)) return true;
+    if (talkToggle.contains(el) && !document.body.classList.contains('talking')) return true;
+    if (!talkEl.hidden && talkEl.contains(el)) return true;
     if (!bubbleEl.hidden && bubbleEl.classList.contains('chat') && el === bubbleText) return true;
     return el !== creatureEl && creatureEl.contains(el);
   }
@@ -409,10 +419,11 @@
   // et sa réponse s'affiche dans sa propre bulle.
   // ------------------------------------------------------------------
 
-  const chat = { open: false, mode: 'chat', answering: null, text: '', status: '', projet: '' };
+  const chat = { open: false, mode: 'chat', answering: null, text: '', status: '', projet: '', line: null };
 
   async function openAsk(mode) {
     if (baseMood === 'sleeping') wake();
+    if (talk.open && mode !== 'key') { api.focus(); talkInput.focus(); return; } // on écrit dans la discussion
     let wanted = mode;
     if (!wanted) {
       const state = await api.chatState();
@@ -482,6 +493,13 @@
     chat.text = '';
     chat.status = '';
     chat.projet = '';
+    chat.line = null;
+    if (talk.open) {
+      talkLine('moi', text);
+      chat.line = talkLine('lui', '');
+      chat.status = '…';
+      showAnswer();
+    }
     hideBubble();
     setMood('thinking');
     api.ask(id, text);
@@ -491,6 +509,14 @@
   const plain = (t) => t.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/`{1,3}/g, '');
 
   function showAnswer() {
+    if (chat.line) { // la discussion est ouverte : la réponse s'écrit dans le fil
+      const answer = plain(chat.text).trim();
+      chat.line.textContent = answer;
+      if (!answer && chat.status) chat.line.appendChild(Object.assign(document.createElement('em'), { className: 'status', textContent: chat.status }));
+      if (answer && chat.projet) chat.line.appendChild(Object.assign(document.createElement('small'), { className: 'projet', textContent: `rangé dans « ${chat.projet} »` }));
+      talkLog.scrollTop = talkLog.scrollHeight;
+      return;
+    }
     clearTimeout(bubbleTimer);
     bubbleEl.classList.remove('leaving');
     bubbleEl.classList.add('chat');
@@ -544,6 +570,13 @@
     chat.answering = null;
     chat.status = '';
     chat.projet = projet || '';
+    if (chat.line) {
+      showAnswer();
+      if (!chat.text.trim()) chat.line.remove();
+      chat.line = null;
+      if (!talk.open) talkToggle.classList.add('unread');
+      return;
+    }
     if (chat.text.trim()) { showAnswer(); scheduleAnswerHide(); } else hideBubble();
   }
 
@@ -564,6 +597,13 @@
   function onChatError({ id, message, needsKey }) {
     if (id && id !== chat.answering) return;
     chat.answering = null;
+    if (chat.line) {
+      chat.line.className = 'info';
+      chat.line.textContent = message || '';
+      chat.line = null;
+      if (needsKey) openAsk('key');
+      return;
+    }
     bubbleEl.classList.remove('chat');
     if (needsKey) openAsk('key');
     if (message) say(message, 6000);
@@ -669,6 +709,71 @@
   // ------------------------------------------------------------------
   // Commandes des modules (processus principal)
   // ------------------------------------------------------------------
+
+  // ------------------------------------------------------------------
+  // Discussion : une petite bulle à côté de lui ; un clic l'agrandit en
+  // fil de discussion (vos derniers échanges + une ligne pour écrire),
+  // « – » la réduit. Elle reste comme tu l'as laissée.
+  // ------------------------------------------------------------------
+
+  function talkLine(kind, text) {
+    const empty = talkLog.querySelector('.vide');
+    if (empty) empty.remove();
+    const p = document.createElement('p');
+    p.className = kind;
+    if (kind === 'moi') p.appendChild(document.createElement('span')).textContent = text;
+    else p.textContent = text;
+    talkLog.appendChild(p);
+    while (talkLog.children.length > 80) talkLog.firstChild.remove();
+    talkLog.scrollTop = talkLog.scrollHeight;
+    return p;
+  }
+
+  async function loadHistory() {
+    talk.loaded = true;
+    let items = [];
+    try { items = await api.chatHistory(); } catch { /* pas grave */ }
+    if (talkLog.children.length) return; // on a déjà commencé à parler
+    if (!items.length) {
+      talkLog.appendChild(Object.assign(document.createElement('p'), { className: 'vide', textContent: 'Pas encore de discussion. Dis-moi quelque chose !' }));
+      return;
+    }
+    for (const e of items) { talkLine('moi', e.moi); talkLine('lui', plain(e.toi)); }
+  }
+
+  function setTalk(open, { focus = true } = {}) {
+    talk.open = open;
+    document.body.classList.toggle('talking', open);
+    talkEl.hidden = !open;
+    try { localStorage.setItem('talkOpen', open ? '1' : '0'); } catch { /* pas grave */ }
+    if (open) {
+      talkToggle.classList.remove('unread');
+      closeAsk();
+      hideBubble();
+      if (!talk.loaded) loadHistory();
+      fitHeight(talkEl.offsetHeight);
+      talkLog.scrollTop = talkLog.scrollHeight;
+      setIgnore(false);
+      if (focus) { api.focus(); talkInput.focus(); }
+    } else {
+      talkInput.blur();
+      fitHeight(0);
+    }
+  }
+
+  talkToggle.addEventListener('click', () => setTalk(true));
+  document.getElementById('talk-close').addEventListener('click', () => setTalk(false));
+  document.getElementById('talk-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = talkInput.value.trim();
+    if (!text) return;
+    talkInput.value = '';
+    ask(text);
+  });
+  talkInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setTalk(false);
+  });
+  try { if (localStorage.getItem('talkOpen') === '1') setTimeout(() => setTalk(true, { focus: false }), 600); } catch { /* pas grave */ }
 
   api.onCommand((cmd) => {
     switch (cmd.type) {
