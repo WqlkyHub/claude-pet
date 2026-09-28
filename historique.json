@@ -1,0 +1,45 @@
+{
+  "maj": "2026-09-28T17:10:00Z",
+  "note": "Tenu à jour par Claude dans l'app (projet « Claude Pet »). Le compagnon le relit toutes les 6 heures.",
+  "projets": [
+    {
+      "nom": "Claude Pet",
+      "resume": "Le compagnon de bureau que Sacha construit avec Claude dans l'app Claude (app Electron pour Windows) : un axolotl orange en pixel art qui évolue en dragon puis en dragon céleste, toujours au premier plan, qui discute par l'abonnement Claude via Claude Code, se souvient de tout et range les demandes par projet, et se met à jour en un clic. Prochaines étapes : lancer musique, logiciels et sites ; chercher des fichiers et diagnostiquer des problèmes ; choisir tout seul entre discussion, Claude Code et Cowork.",
+      "evenements": [
+        {
+          "date": "2026-09-28",
+          "texte": "Naissance : axolotl orange en pixel art aux couleurs de Claude, humeurs, caresses, s'endort quand le PC est inactif ; Sacha a choisi le pixel art et l'axolotl."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Évolution en trois formes (axolotl, dragon, dragon céleste) : Sacha voulait de vrais changements de forme, pas de couleur."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Discussion sans fenêtre : un clic, une ligne pour écrire, la réponse dans sa bulle. Passe par l'abonnement Claude via Claude Code, pas par une clé API (Sacha ne veut pas être facturé à l'usage)."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Fatigue liée au quota Claude : bâille, s'assoit, puis tombe KO sur le dos quand le quota est vide."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Réagit à l'activité : lunettes quand Sacha code, casque avec la musique, remarques rares ; reste toujours au premier plan, même en plein écran, à la demande de Sacha."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Installé sur Windows avec Installer.cmd, raccourci Bureau et démarrage avec Windows."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Mémoire durable rangée par projet, relecture des sessions Claude Code, import de l'export claude.ai ; 35 % plus petit ; mises à jour en un clic et historique envoyé par Claude."
+        }
+      ]
+    }
+  ],
+  "souvenirs": [
+    "Sacha parle français et utilise Windows.",
+    "Sacha veut une interface la plus minimale possible : pas de fenêtres, le compagnon ne montre des choses que quand c'est utile.",
+    "Sacha veut qu'on lui demande toujours l'autorisation avant de modifier quoi que ce soit sur son PC."
+  ]
+}

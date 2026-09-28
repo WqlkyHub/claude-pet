@@ -1,0 +1,619 @@
+:root {
+  --bubble-bg: #FFFFFF;
+  --bubble-fg: #3A1F17;
+  --bubble-border: #3A1F17;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bulle                                                              */
+/* ------------------------------------------------------------------ */
+
+.bubble {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 125px; /* juste au-dessus de sa tête (180 px × 0.65 + marge) */
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.bubble[hidden] { display: none; }
+/* le dragon céleste est plus grand : la bulle et la ligne montent un peu */
+body:has(#pet[data-stage="3"]) .bubble { bottom: 148px; }
+body:has(#pet[data-stage="3"]) .ask { bottom: 152px; }
+.bubble span {
+  position: relative;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 0;
+  background: var(--bubble-bg);
+  color: var(--bubble-fg);
+  border: 3px solid var(--bubble-border);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 4px 4px 0 var(--bubble-border);
+  animation: bubble-in 0.2s steps(3);
+}
+.bubble span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  width: 9px;
+  height: 9px;
+  margin-left: -6px;
+  background: var(--bubble-bg);
+  border: 3px solid var(--bubble-border);
+  border-top: none;
+}
+.bubble.leaving span { animation: bubble-out 0.2s steps(2) forwards; }
+
+/* Réponse de Claude : texte plus long, qu'on peut lire, faire défiler et copier. */
+.bubble.chat span {
+  pointer-events: auto;
+  text-align: left;
+  font-weight: 400;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 380px;
+  overflow-y: auto;
+  user-select: text;
+  cursor: default;
+}
+.bubble.chat span::after { display: none; }
+.bubble.chat span::-webkit-scrollbar { width: 6px; }
+/* « Je fouille dans nos souvenirs… » et « rangé dans ... » : discrets. */
+.bubble.chat .status { font-style: italic; opacity: 0.6; }
+.bubble.chat .projet { display: block; margin-top: 4px; font-size: 0.8em; opacity: 0.55; }
+.bubble.chat span::-webkit-scrollbar-thumb { background: var(--bubble-border); }
+
+/* Petite ligne pour parler à Claude, au-dessus du compagnon. */
+.ask {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 129px;
+  margin: 0;
+  animation: bubble-in 0.2s steps(3);
+}
+.ask[hidden] { display: none; }
+.ask input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bubble-fg);
+  background: var(--bubble-bg);
+  border: 3px solid var(--bubble-border);
+  box-shadow: 4px 4px 0 #D97757;
+  outline: none;
+}
+.ask input::placeholder { color: #A08478; font-weight: 400; }
+.ask.error input { box-shadow: 4px 4px 0 #E0445E; }
+
+@keyframes bubble-in { from { opacity: 0; transform: scale(0.6) translateY(10px); } }
+@keyframes bubble-out { to { opacity: 0; transform: scale(0.8) translateY(6px); } }
+
+/* ------------------------------------------------------------------ */
+/* Scène et créature                                                  */
+/* ------------------------------------------------------------------ */
+
+#stage {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 180px;
+  height: 180px;
+  margin-left: -90px;
+  /* taille du compagnon à l'écran (0.65 = 35 % plus petit que le dessin d'origine) */
+  transform: scale(var(--pet-scale, 0.65));
+  transform-origin: 50% 100%;
+}
+
+#pet {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+#pet.dragging { cursor: grabbing; }
+
+#jump, #breath, #pose, #creature { width: 100%; height: 100%; display: block; }
+#creature { overflow: visible; }
+#creature * { transform-box: fill-box; }
+
+/* Respiration façon jeu rétro : il s'écrase d'un pixel, puis se relève. */
+#breath {
+  transform-origin: 50% 100%;
+  animation: breathe 1.8s steps(1) infinite;
+}
+#pet[data-mood="sleeping"] #breath { animation-duration: 3s; }
+body.tired #breath { animation-duration: 2.6s; } /* quota Claude bas : il respire plus lentement */
+
+@keyframes breathe {
+  0%, 100% { transform: none; }
+  50% { transform: scale(1.03, 0.95); }
+}
+
+/* l'ombre dessinée dans le SVG bougerait avec lui : on utilise #shadow, posée au sol */
+.ground-shadow { display: none; }
+@keyframes shadow { 50% { transform: scaleX(1.05); } }
+
+/* Étincelle de Claude sur la tête, qui scintille */
+.spark { transform-origin: center; animation: twinkle 4s ease-in-out infinite; }
+@keyframes twinkle {
+  0%, 80%, 100% { transform: scale(1); }
+  84% { transform: scale(1.4); }
+  88% { transform: scale(0.8); }
+}
+/* Branchies qui ondulent, et la queue qui remue. */
+.gills.side-left, .fin.side-left { animation: gill-l 1.2s steps(1) infinite; }
+.gills.side-right, .fin.side-right { animation: gill-r 1.2s steps(1) infinite; }
+.wing.side-left { animation: gill-l 2.4s steps(1) infinite; }
+.wing.side-right { animation: gill-r 2.4s steps(1) infinite; }
+@keyframes gill-l { 50% { transform: translateX(-3px); } }
+@keyframes gill-r { 50% { transform: translateX(3px); } }
+#pet[data-mood="happy"] :is(.gills, .fin, .wing), #pet[data-mood="love"] :is(.gills, .fin, .wing) { animation-duration: 0.4s; }
+#pet[data-mood="sleeping"] :is(.gills, .fin, .wing) { animation-duration: 3s; }
+.tail { animation: tail 1.6s steps(1) infinite; }
+@keyframes tail { 50% { transform: translate(3px, -3px); } }
+
+/* Bras qui se balancent doucement */
+.arm { animation: arm 1.8s steps(1) infinite; }
+@keyframes arm { 50% { transform: translateY(-5px); } }
+
+/* Clignement */
+.eye-lid { transform-origin: center; transition: transform 0.07s ease-in; }
+.blink .eye-lid { transform: scaleY(0.1); }
+
+
+/* ------------------------------------------------------------------ */
+/* Couleurs : une variable par teinte du pixel art                    */
+/* ------------------------------------------------------------------ */
+
+#pet {
+  --ol: #3A1F17; --o: #D97757; --l: #F0A283; --s: #B9583B; --b: #F5C9A8;
+  --g: #C8553D; --t: #F28C6B; --k: #2A1510; --w: #FFFFFF; --r: #E0445E;
+  --y: #F6C66B; --yy: #FFF3B0; --m: #8C2F22; --p: #F28C9B;
+}
+.c-ol { fill: var(--ol); } .c-o { fill: var(--o); } .c-l { fill: var(--l); }
+.c-s { fill: var(--s); } .c-b { fill: var(--b); } .c-g { fill: var(--g); }
+.c-t { fill: var(--t); } .c-k { fill: var(--k); } .c-w { fill: var(--w); }
+.c-r { fill: var(--r); } .c-y { fill: var(--y); } .c-yy { fill: var(--yy); }
+.c-m { fill: var(--m); } .c-p { fill: var(--p); }
+
+/* ------------------------------------------------------------------ */
+/* Partie du corps qui change de forme selon l'humeur                 */
+/* (nageoires, branchies, pattes ou ailes selon le stade)             */
+/* ------------------------------------------------------------------ */
+
+.moodpart { display: none; }
+#pet[data-mood="idle"] .mp-normal,
+#pet[data-mood="thinking"] .mp-normal,
+#pet[data-mood="happy"] .mp-up,
+#pet[data-mood="love"] .mp-up,
+#pet[data-mood="sleepy"] .mp-down,
+#pet[data-mood="sleeping"] .mp-down,
+#pet[data-mood="surprised"] .mp-spiky,
+#pet[data-mood="dizzy"] .mp-spiky { display: inline; }
+
+/* ------------------------------------------------------------------ */
+/* Formes d'évolution : 1 axolotl, 2 dragon, 3 dragon céleste         */
+/* ------------------------------------------------------------------ */
+
+.stage, .aura { display: none; }
+#pet[data-stage="1"] .stage-1,
+#pet[data-stage="2"] .stage-2,
+#pet[data-stage="3"] .stage-3,
+#pet[data-stage="3"] .aura { display: inline; }
+
+/* Le dragon a une étincelle plus grosse. */
+#pet[data-stage="2"] .spark { animation-name: twinkle-big; transform: scale(1.5); }
+@keyframes twinkle-big {
+  0%, 80%, 100% { transform: scale(1.5); }
+  84% { transform: scale(1.9); }
+  88% { transform: scale(1.2); }
+}
+
+/* Le dragon céleste est plus grand, son étincelle devient une étoile qui flotte
+   au-dessus de sa tête, et des lueurs scintillent autour de lui. */
+/* --flip retourne le compagnon vers la gauche quand il se déplace dans ce sens */
+#creature { transform: scaleX(var(--flip, 1)); transition: transform 0.15s steps(2); }
+#pet[data-stage="3"] #creature { transform: scale(calc(var(--flip, 1) * 1.1), 1.1); }
+#pet[data-stage="3"] .spark { display: none; }
+.star { animation: star 2.4s steps(1) infinite; }
+@keyframes star {
+  0%, 100% { transform: none; }
+  25% { transform: translateY(-4px); }
+  50% { transform: translateY(-6px) scale(1.15); }
+  75% { transform: translateY(-4px); }
+}
+.aura rect { animation: aura 2.1s steps(1) infinite; }
+@keyframes aura { 0%, 60% { opacity: 0; } 61%, 100% { opacity: 1; } }
+
+/* Moment de l'évolution : il clignote en blanc, façon jeu rétro */
+#pet.evolving #creature { animation: evolve-flash 1.6s steps(1); }
+@keyframes evolve-flash {
+  0%, 20%, 40%, 60%, 80% { filter: brightness(1); }
+  10%, 30%, 50%, 70%, 90% { filter: brightness(0) invert(1); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Expressions : chaque humeur choisit ses yeux et sa bouche          */
+/* ------------------------------------------------------------------ */
+
+.eyes, .mouth { display: none; }
+
+#pet[data-mood="idle"] .eyes-open,
+#pet[data-mood="thinking"] .eyes-open,
+#pet[data-mood="happy"] .eyes-happy,
+#pet[data-mood="love"] .eyes-heart,
+#pet[data-mood="surprised"] .eyes-surprised,
+#pet[data-mood="sleepy"] .eyes-sleepy,
+#pet[data-mood="sleeping"] .eyes-closed,
+#pet[data-mood="dizzy"] .eyes-dizzy { display: inline; }
+
+#pet[data-mood="idle"] .mouth-smile,
+#pet[data-mood="love"] .mouth-smile,
+#pet[data-mood="happy"] .mouth-open,
+#pet[data-mood="surprised"] .mouth-o,
+#pet[data-mood="sleepy"] .mouth-flat,
+#pet[data-mood="sleeping"] .mouth-flat,
+#pet[data-mood="dizzy"] .mouth-wavy,
+#pet[data-mood="thinking"] .mouth-think { display: inline; }
+
+.eyes-heart .eye { transform-origin: center; animation: heartbeat 0.6s steps(1) infinite; }
+@keyframes heartbeat { 50% { transform: scale(1.2); } }
+
+.eyes-dizzy .eye { animation: dizzy 0.5s steps(1) infinite; }
+@keyframes dizzy { 50% { transform: translateY(-5px); } }
+
+.cheek { transition: opacity 0.3s; }
+#pet[data-mood="love"] .cheek,
+#pet[data-mood="happy"] .cheek { opacity: 1; }
+.cheek { opacity: 0.6; }
+
+/* ------------------------------------------------------------------ */
+/* Animations ponctuelles (ajoutées par pet.js)                       */
+/* ------------------------------------------------------------------ */
+
+#jump { transform-origin: 50% 100%; }
+#jump.anim-hop { animation: hop 0.55s cubic-bezier(.3, .7, .4, 1); }
+#jump.anim-wiggle { animation: wiggle 0.6s ease-in-out; }
+#jump.anim-spin { animation: spin-body 0.8s ease-in-out; }
+#jump.anim-stretch { animation: stretch 1.6s ease-in-out; }
+#jump.anim-squash { animation: squash 0.35s ease-out; }
+#jump.anim-shake { animation: shake 0.5s linear; }
+
+@keyframes hop {
+  0% { transform: scale(1.1, 0.9); }
+  35% { transform: translateY(-34px) scale(0.94, 1.08); }
+  70% { transform: translateY(0) scale(1.08, 0.92); }
+  100% { transform: none; }
+}
+@keyframes wiggle {
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  80% { transform: rotate(4deg); }
+}
+@keyframes spin-body {
+  0% { transform: none; }
+  50% { transform: translateY(-20px) rotate(180deg) scale(0.9); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes stretch {
+  30% { transform: scale(0.92, 1.12); }
+  60% { transform: scale(1.05, 0.95); }
+}
+@keyframes squash {
+  0% { transform: scale(1.2, 0.8); }
+  60% { transform: scale(0.95, 1.05); }
+}
+@keyframes shake {
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+/* Pendant qu'on le transporte, il se balance comme une peluche tenue en l'air. */
+#pet.dragging #jump { animation: dangle 0.9s ease-in-out infinite; transform-origin: 50% 20%; }
+#pet.dragging .foot { transform: translateY(5px); }
+@keyframes dangle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+
+/* ------------------------------------------------------------------ */
+/* Z de sommeil et cœurs                                              */
+/* ------------------------------------------------------------------ */
+
+#zzz {
+  position: absolute;
+  right: 18px;
+  top: 10px;
+  display: none;
+  font-weight: 700;
+  color: #F6C66B;
+  text-shadow: 2px 2px 0 #3A1F17;
+  pointer-events: none;
+}
+body.sleeping #zzz { display: block; }
+#zzz span {
+  position: absolute;
+  opacity: 0;
+  animation: float-z 3s ease-out infinite;
+}
+#zzz span:nth-child(1) { font-size: 12px; animation-delay: 0s; }
+#zzz span:nth-child(2) { font-size: 15px; animation-delay: 1s; }
+#zzz span:nth-child(3) { font-size: 19px; animation-delay: 2s; }
+@keyframes float-z {
+  0% { opacity: 0; transform: translate(0, 20px); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(18px, -30px); }
+}
+
+#hearts { position: absolute; inset: 0; pointer-events: none; }
+.heart {
+  position: absolute;
+  font-size: 20px;
+  color: #E0445E;
+  text-shadow: 2px 2px 0 #3A1F17;
+  animation: float-heart 1.4s steps(8) forwards;
+}
+@keyframes float-heart {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  20% { opacity: 1; transform: translateY(-10px) scale(1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(0.8); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Fatigue selon le quota Claude (module quota)                        */
+/* sit : quota bas, il s'affale sur les fesses, somnole et respire     */
+/*       lourdement.                                                   */
+/* ko  : quota vide, il tombe à la renverse : sur le dos, pattes en   */
+/*       l'air, tête de profil, œil en croix et langue qui pend.       */
+/* ------------------------------------------------------------------ */
+
+#pose { transform-origin: 50% 100%; }
+.sit-legs { display: none; }
+
+/* --- Assis ------------------------------------------------------------ */
+#pet[data-energy="sit"] .sit-legs { display: inline; }
+#pet[data-energy="sit"] .foot { display: none; }
+#pet[data-energy="sit"] #pose { transform: translateY(10px); animation: doze 7s ease-in-out infinite; }
+/* grosse respiration lente, comme des soupirs */
+#pet[data-energy="sit"] #breath { animation: heavy-breath 3.2s ease-in-out infinite; }
+@keyframes heavy-breath {
+  0%, 100% { transform: none; }
+  45% { transform: scale(1.035, 0.95); }
+}
+/* il pique du nez, puis se redresse d'un coup */
+@keyframes doze {
+  0%, 62% { transform: translateY(10px); }
+  78% { transform: translateY(15px) scale(1.03, 0.95); }
+  82% { transform: translateY(7px) scale(0.98, 1.03); }
+  88%, 100% { transform: translateY(10px); }
+}
+/* bras ballants qui se balancent mollement, queue et branchies au ralenti */
+#pet[data-energy="sit"] .arm { animation: arm-hang 3.2s ease-in-out infinite; }
+@keyframes arm-hang { 0%, 100% { transform: translateY(5px); } 50% { transform: translateY(8px); } }
+#pet[data-energy="sit"] .tail { animation-duration: 3.2s; }
+#pet[data-energy="sit"] :is(.gills, .fin, .wing) { animation-duration: 3.2s; }
+
+/* s'affaler : il vacille, s'écrase et rebondit un peu sur ses fesses */
+#jump.anim-flop { animation: flop 1.1s cubic-bezier(.3, .6, .4, 1); }
+@keyframes flop {
+  0% { transform: none; }
+  20% { transform: scale(1.04, 0.97) rotate(-3deg); }
+  38% { transform: scale(0.97, 1.04) rotate(3deg); }
+  58% { transform: translateY(8px) scale(1.18, 0.78); }
+  72% { transform: translateY(-4px) scale(0.94, 1.06); }
+  86% { transform: translateY(2px) scale(1.05, 0.95); }
+  100% { transform: none; }
+}
+
+/* --- KO --------------------------------------------------------------- */
+/* Étalé sur le dos, ventre en l'air, pattes vers le ciel, tête posée de
+   profil avec un œil en croix et la langue qui pend. C'est un sprite à part
+   (.ko-sprite), affiché à la place du compagnon debout. */
+.ko-sprite { display: none; }
+#pet[data-energy="ko"] .ko-sprite { display: inline; }
+#pet[data-energy="ko"] #creature > :not(.ko-sprite, .spark, .aura) { display: none; }
+#pet[data-energy="ko"] #breath { animation: none; }
+
+/* La chute (compagnon debout) : il bascule simplement en arrière. */
+#pet.falling #pose { animation: topple 0.4s ease-in forwards; }
+@keyframes topple { to { transform: translateY(4px) rotate(-35deg); } }
+/* le temps de la chute, il a les yeux qui tournent ; la croix arrive au sol */
+#pet.dazed .eyes:not(.eyes-dizzy), #pet.dazed .mouth:not(.mouth-wavy) { display: none !important; }
+#pet.dazed .eyes-dizzy, #pet.dazed .mouth-wavy { display: inline !important; }
+
+/* L'atterrissage (sprite couché) : un petit rebond, c'est tout. */
+#pet.landing #pose { animation: land 0.45s ease-out; }
+@keyframes land {
+  0% { transform: scale(1.06, 0.92); }
+  45% { transform: translateY(-4px); }
+  100% { transform: none; }
+}
+
+/* Une fois étalé : le ventre se soulève à chaque respiration (les pattes
+   montent avec lui), les pattes et la queue gigotent de temps en temps,
+   la langue pend en tremblotant. */
+.ko-torso { transform-origin: 50% 100%; animation: ko-belly 2.8s ease-in-out infinite; }
+@keyframes ko-belly { 0%, 100% { transform: none; } 40% { transform: scaleY(1.1); } }
+.ko-leg { transform-origin: 50% 100%; animation: ko-kick 3.6s steps(1) infinite; }
+.ko-leg:nth-child(2) { animation-delay: 0.2s; }
+@keyframes ko-kick { 0%, 84%, 100% { transform: none; } 86%, 92% { transform: translateY(-4px) rotate(10deg); } 89% { transform: translateY(1px) rotate(-8deg); } }
+.ko-tail { animation: ko-tail 3.6s steps(1) infinite 0.6s; }
+@keyframes ko-tail { 0%, 82%, 100% { transform: none; } 84%, 90% { transform: translate(3px, -3px); } 87% { transform: translate(-1px, 1px); } }
+.ko-wing { transform-origin: 50% 100%; animation: ko-wing 2.8s ease-in-out infinite; }
+@keyframes ko-wing { 0%, 100% { transform: none; } 40% { transform: scaleY(0.9) translateY(2px); } }
+.ko-gills { animation: gill-r 3s steps(1) infinite; }
+.ko-mouth { animation: ko-tongue 2.8s steps(1) infinite; }
+@keyframes ko-tongue { 40% { transform: translateY(1px); } }
+@keyframes ko-star { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.8; } }
+
+/* son étincelle tourne au-dessus de sa tête, façon « il voit des étoiles » */
+#pet[data-energy="ko"] .spark { display: inline; animation: ko-spark 1.4s linear infinite; }
+@keyframes ko-spark {
+  0%, 100% { transform: translate(-58px, 70px); }
+  25% { transform: translate(-72px, 78px) scale(0.8); }
+  50% { transform: translate(-58px, 86px) scale(1.2); }
+  75% { transform: translate(-44px, 78px) scale(0.8); }
+}
+
+/* Il se relève quand le quota revient : il gigote sur le dos pour se
+   retourner, puis se redresse d'un coup en titubant. */
+#pet.rising #pose { animation: wriggle 0.7s ease-in-out; }
+@keyframes wriggle {
+  0%, 100% { transform: none; }
+  20% { transform: rotate(-6deg); }
+  45% { transform: rotate(7deg) translateY(-2px); }
+  70% { transform: rotate(-10deg) translateY(-4px); }
+}
+#pet.rising .ko-leg { animation: flail 0.16s steps(1) infinite; }
+#pet.getting-up #pose { animation: getup 0.9s linear; }
+@keyframes getup {
+  0% { transform: translateY(6px) rotate(-78deg) scale(1.05, 0.95); animation-timing-function: ease-out; }
+  38% { transform: rotate(8deg) scale(0.95, 1.05); animation-timing-function: ease-in-out; }
+  54% { transform: translateY(8px) scale(1.14, 0.84); animation-timing-function: ease-in-out; }
+  72% { transform: rotate(-6deg) scale(0.97, 1.03); animation-timing-function: ease-in-out; }
+  86% { transform: rotate(3deg); animation-timing-function: ease-in-out; }
+  100% { transform: none; }
+}
+body.ko #zzz { display: none; }
+
+/* ------------------------------------------------------------------ */
+/* Déplacement : il marche (axolotl) ou vole (dragons) dans le sens où */
+/* tu le déplaces. À l'arrêt, il pend comme une peluche.               */
+/* ------------------------------------------------------------------ */
+
+#pet.dragging.moving #jump {
+  animation: none;
+  transform: rotate(calc(var(--flip, 1) * 7deg));
+  transition: transform 0.2s;
+}
+#pet.dragging.moving[data-dir="left"] { --flip: -1; }
+
+/* marche : pas alternés, petit dandinement, queue qui frétille */
+#pet.dragging.moving[data-stage="1"] #pose { animation: walk-bob 0.4s steps(2) infinite; }
+@keyframes walk-bob { 0%, 100% { transform: none; } 50% { transform: translateY(-5px); } }
+#pet.dragging.moving[data-stage="1"] .foot { animation: step 0.4s steps(1) infinite; transform: none; }
+#pet.dragging.moving[data-stage="1"] .foot.side-right { animation-delay: -0.2s; }
+@keyframes step { 0%, 100% { transform: translateY(-8px); } 50% { transform: none; } }
+#pet.dragging.moving[data-stage="1"] .tail { animation-duration: 0.3s; }
+#pet.dragging.moving[data-stage="1"] .gills { animation-duration: 0.2s; }
+
+/* vol : il flotte, bat des ailes très vite, pattes rentrées, ombre plus petite */
+#pet.dragging.moving:not([data-stage="1"]) #pose { animation: fly-bob 0.6s ease-in-out infinite; }
+@keyframes fly-bob { 0%, 100% { transform: translateY(-10px); } 50% { transform: translateY(-18px); } }
+#pet.dragging.moving .wing.side-left { animation: flap-l 0.24s steps(1) infinite; transform-origin: 100% 60%; }
+#pet.dragging.moving .wing.side-right { animation: flap-r 0.24s steps(1) infinite; transform-origin: 0% 60%; }
+@keyframes flap-l { 0%, 100% { transform: none; } 50% { transform: translate(8px, 10px) scale(0.6, 0.8); } }
+@keyframes flap-r { 0%, 100% { transform: none; } 50% { transform: translate(-8px, 10px) scale(0.6, 0.8); } }
+#pet.dragging.moving:not([data-stage="1"]) .foot { transform: translateY(-4px); }
+#pet.dragging.moving .tail { animation-duration: 0.5s; }
+/* soulevé alors qu'il était assis : ses pattes pendent à nouveau */
+#pet.dragging[data-energy="sit"] .sit-legs { display: none; }
+#pet.dragging[data-energy="sit"] .foot { display: inline; }
+#pet.dragging[data-energy="sit"] #pose { animation: none; transform: none; }
+
+/* ------------------------------------------------------------------ */
+/* Ombre au sol : elle reste par terre et réagit à ce qu'il fait       */
+/* (plus petite et plus pâle quand il est en l'air, plus large quand   */
+/* il s'écrase ou qu'il est couché).                                    */
+/* ------------------------------------------------------------------ */
+
+#pet { position: relative; z-index: 1; }
+#shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 108px;
+  height: 7px;
+  margin-left: -54px;
+  background: #000;
+  opacity: 0.18;
+  transform-origin: 50% 50%;
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  animation: shadow-breath 1.8s steps(1) infinite;
+  pointer-events: none;
+}
+@keyframes shadow-breath { 50% { transform: scaleX(1.05); } }
+#stage:has(#pet[data-stage="3"]) #shadow { width: 124px; margin-left: -62px; }
+
+/* sauts et gestes */
+#stage:has(#jump.anim-hop) #shadow { animation: shadow-hop 0.55s cubic-bezier(.3, .7, .4, 1); }
+@keyframes shadow-hop { 0% { transform: scaleX(1.1); } 35% { transform: scaleX(0.6); opacity: 0.08; } 70% { transform: scaleX(1.1); } 100% { transform: none; } }
+#stage:has(#jump.anim-spin) #shadow { animation: shadow-spin 0.8s ease-in-out; }
+@keyframes shadow-spin { 50% { transform: scaleX(0.75); opacity: 0.1; } }
+#stage:has(#jump.anim-squash) #shadow { animation: shadow-squash 0.35s ease-out; }
+@keyframes shadow-squash { 0% { transform: scaleX(1.25); } }
+#stage:has(#jump.anim-flop) #shadow { animation: shadow-flop 1.1s cubic-bezier(.3, .6, .4, 1); }
+@keyframes shadow-flop { 58% { transform: scaleX(1.3); opacity: 0.22; } 72% { transform: scaleX(0.95); } }
+
+/* porté : il est soulevé, l'ombre rapetisse */
+#stage:has(#pet.dragging) #shadow { animation: none; transform: scaleX(0.7); opacity: 0.1; }
+/* marche : l'ombre suit ses pas */
+#stage:has(#pet.dragging.moving[data-stage="1"]) #shadow { animation: shadow-walk 0.4s steps(2) infinite; opacity: 0.18; }
+@keyframes shadow-walk { 0%, 100% { transform: scaleX(0.92); } 50% { transform: scaleX(1); } }
+/* vol : petite ombre qui respire à l'inverse de ses battements */
+#stage:has(#pet.dragging.moving:not([data-stage="1"])) #shadow { animation: shadow-fly 0.6s ease-in-out infinite; }
+@keyframes shadow-fly { 0%, 100% { transform: scaleX(0.6); opacity: 0.1; } 50% { transform: scaleX(0.5); opacity: 0.07; } }
+
+/* assis : base plus large, qui suit sa grosse respiration */
+#stage:has(#pet[data-energy="sit"]:not(.dragging)) #shadow { animation: shadow-sit 3.2s ease-in-out infinite; }
+@keyframes shadow-sit { 0%, 100% { transform: scaleX(1.12); } 45% { transform: scaleX(1.18); } }
+
+/* KO : large ombre de corps couché ; au choc elle s'élargit d'un coup */
+#stage:has(#pet[data-energy="ko"]) #shadow { animation: none; transform: scaleX(1.6); opacity: 0.2; }
+#stage:has(#pet.falling) #shadow { animation: shadow-fall 0.4s ease-in forwards; }
+@keyframes shadow-fall { to { transform: scaleX(1.3); } }
+#stage:has(#pet.getting-up) #shadow { animation: shadow-rise 0.9s ease-in-out; }
+@keyframes shadow-rise { 0% { transform: scaleX(1.6); } 38% { transform: scaleX(1); } 54% { transform: scaleX(1.25); } 100% { transform: none; } }
+
+/* petits nuages de poussière au moment du choc */
+#dust { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.puff {
+  position: absolute;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  background: #D9CFC6;
+  box-shadow: 0 0 0 2px #B8AAA0;
+  animation: puff 0.7s ease-out forwards;
+}
+@keyframes puff {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 1; }
+  100% { transform: translate(var(--dx), -18px) scale(1.3); opacity: 0; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Activité (module activity)                                          */
+/* Lunettes quand tu codes depuis un moment, casque avec la musique.   */
+/* ------------------------------------------------------------------ */
+.gear { display: none; }
+#pet[data-gear~="glasses"] .gear-glasses,
+#pet[data-gear~="headphones"] .gear-headphones { display: inline; }
+
+.note { color: #F6C445; }
+
+/* Avec de la musique, il se balance en rythme (façon rétro, par à-coups). */
+#pet.grooving:not(.dragging, .falling, .landing, .rising, .getting-up):not([data-energy="sit"], [data-energy="ko"]) #pose {
+  animation: groove 1s steps(1) infinite;
+}
+#pet.grooving[data-mood="sleeping"] #pose { animation: none; }
+@keyframes groove {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg) translateY(-2px); }
+}
