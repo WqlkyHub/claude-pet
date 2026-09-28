@@ -487,8 +487,9 @@
     if (chat.open && !askInput.value.trim()) closeAsk();
   });
 
-  function ask(text) {
+  function ask(text, { voice: spoken = false } = {}) {
     const id = `q${Date.now()}`;
+    if (spoken) voice.speakFor = id; // tu lui as parlé au micro : il répondra à voix haute
     chat.answering = id;
     chat.text = '';
     chat.status = '';
@@ -565,11 +566,13 @@
     showAnswer();
   }
 
-  function onChatDone({ id, projet }) {
+  function onChatDone({ id, projet, text }) {
     if (id !== chat.answering) return;
+    if (typeof text === 'string') chat.text = text; // version nettoyée (sans balises)
     chat.answering = null;
     chat.status = '';
     chat.projet = projet || '';
+    if (voice.speakFor === id) { voice.speakFor = null; speakAloud(plain(chat.text)); }
     if (chat.line) {
       showAnswer();
       if (!chat.text.trim()) chat.line.remove();
@@ -578,6 +581,120 @@
       return;
     }
     if (chat.text.trim()) { showAnswer(); scheduleAnswerHide(); } else hideBubble();
+  }
+
+  // ------------------------------------------------------------------
+  // Micro et voix : tu appuies sur le micro, tu parles, il s'arrête tout
+  // seul quand tu te tais (ou re-clic). Ta voix devient du texte sur ton PC
+  // (whisper.cpp), et sa réponse est lue à voix haute (Piper), seulement
+  // quand tu lui as parlé au micro.
+  // ------------------------------------------------------------------
+
+  const micBtn = document.getElementById('talk-mic');
+  const voice = { rec: null, speakFor: null, audio: null };
+
+  function wavFrom(chunks, rate) {
+    const n = chunks.reduce((a, c) => a + c.length, 0);
+    const buf = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(buf);
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, 'data'); v.setUint32(40, n * 2, true);
+    let o = 44;
+    for (const c of chunks) for (let i = 0; i < c.length; i++, o += 2) v.setInt16(o, Math.max(-1, Math.min(1, c[i])) * 0x7fff, true);
+    return buf;
+  }
+
+  async function record() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    const ctx = new AudioContext({ sampleRate: 16000 });
+    const src = ctx.createMediaStreamSource(stream);
+    const proc = ctx.createScriptProcessor(4096, 1, 1);
+    const chunks = [];
+    let heard = false;
+    let quietFor = 0;
+    const started = performance.now();
+    return new Promise((resolve) => {
+      const stop = () => {
+        if (!voice.rec) return;
+        voice.rec = null;
+        proc.disconnect(); src.disconnect();
+        stream.getTracks().forEach((t) => t.stop());
+        ctx.close();
+        resolve(heard ? wavFrom(chunks, ctx.sampleRate) : null);
+      };
+      voice.rec = { stop };
+      proc.onaudioprocess = (e) => {
+        const data = new Float32Array(e.inputBuffer.getChannelData(0));
+        chunks.push(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+        const loud = Math.sqrt(sum / data.length) > 0.02;
+        const ms = (data.length / ctx.sampleRate) * 1000;
+        if (loud) { heard = true; quietFor = 0; } else quietFor += ms;
+        const elapsed = performance.now() - started;
+        if ((heard && quietFor > 1400) || elapsed > 30000 || (!heard && elapsed > 8000)) stop();
+      };
+      src.connect(proc);
+      proc.connect(ctx.destination);
+    });
+  }
+
+  function setVoiceStatus(status) {
+    if (talk.open) talkInput.placeholder = status || 'Dis-moi...';
+    else if (status) say(status, 4000);
+  }
+
+  async function toggleMic() {
+    if (voice.audio) { voice.audio.pause(); voice.audio = null; }
+    if (voice.rec) { voice.rec.stop(); return; }
+    if (micBtn.classList.contains('busy')) return;
+    micBtn.classList.add('busy');
+    try {
+      if (!(await api.voiceReady())) return;
+      micBtn.classList.add('recording');
+      setVoiceStatus('Je t\'écoute…');
+      setMood('surprised');
+      const wav = await record();
+      micBtn.classList.remove('recording');
+      if (!wav) { setVoiceStatus(''); setMood(baseMood); talkLine('info', 'Je n\'ai rien entendu.'); return; }
+      setVoiceStatus('Je transcris…');
+      setMood('thinking');
+      const text = await api.transcribe(wav);
+      setVoiceStatus('');
+      if (!text) { setMood(baseMood); talkLine('info', 'Je n\'ai pas compris, tu peux répéter ?'); return; }
+      ask(text, { voice: true });
+    } catch (err) {
+      setVoiceStatus('');
+      setMood('dizzy', 2000);
+      talkLine('info', /Permission|NotAllowed|NotFound/i.test(String(err && err.name) + err)
+        ? 'Je n\'ai pas accès au micro. Vérifie Paramètres Windows → Confidentialité → Microphone.'
+        : `Le micro n'a pas marché : ${err.message || err}`);
+    } finally {
+      micBtn.classList.remove('busy', 'recording');
+    }
+  }
+  micBtn.addEventListener('click', toggleMic);
+
+  async function speakAloud(text) {
+    if (!text.trim()) return;
+    try {
+      const wav = await api.speak(text);
+      if (!wav) return;
+      const url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
+      const audio = new Audio(url);
+      voice.audio = audio;
+      petEl.classList.add('speaking');
+      const done = () => { petEl.classList.remove('speaking'); URL.revokeObjectURL(url); if (voice.audio === audio) voice.audio = null; };
+      audio.addEventListener('ended', done);
+      audio.addEventListener('pause', done);
+      await audio.play();
+    } catch (err) {
+      petEl.classList.remove('speaking');
+      talkLine('info', `Je n'arrive pas à parler : ${err.message || err}`);
+    }
   }
 
   // Il fouille dans ses souvenirs : petite phrase d'attente en gris.
@@ -795,6 +912,7 @@
       case 'chat-status': onChatStatus(cmd); break;
       case 'chat-reset': onChatReset(cmd); break;
       case 'chat-error': onChatError(cmd); break;
+      case 'voice-status': setVoiceStatus(cmd.status); break;
       case 'gear': setGear(cmd.items); break;
       case 'groove': petEl.classList.toggle('grooving', Boolean(cmd.on)); break;
       case 'notes': notes(); break;

@@ -710,8 +710,47 @@ body:has(#pet[data-stage="3"]) .talk { bottom: 148px; }
 .talk-log .status { font-style: italic; opacity: 0.6; }
 .talk-log .projet { display: block; font-size: 0.85em; opacity: 0.55; }
 .talk-log .vide { opacity: 0.55; font-style: italic; text-align: center; margin-top: 30px; }
-#talk-form { margin: 0; border-top: 3px solid var(--bubble-border); }
+#talk-form { margin: 0; border-top: 3px solid var(--bubble-border); display: flex; }
+#talk-mic {
+  flex: none;
+  width: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bubble-bg);
+  border: none;
+  border-left: 3px solid var(--bubble-border);
+  cursor: pointer;
+}
+/* micro en pixels : tête ronde et pied */
+#talk-mic i {
+  position: relative;
+  width: 6px;
+  height: 10px;
+  background: var(--bubble-border);
+  box-shadow: -3px 7px 0 -1px transparent;
+}
+#talk-mic i::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 8px;
+  width: 12px;
+  height: 6px;
+  border: 2px solid var(--bubble-border);
+  border-top: none;
+  box-sizing: border-box;
+}
+#talk-mic:hover i { background: #D97757; }
+#talk-mic.busy { opacity: 0.6; }
+#talk-mic.recording { background: #F5E1D6; opacity: 1; }
+#talk-mic.recording i { background: #D0453A; animation: mic-pulse 0.8s steps(2) infinite; }
+@keyframes mic-pulse { 50% { opacity: 0.4; } }
+#pet.speaking #breath { animation-duration: 0.35s; }
 #talk-form input {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   box-sizing: border-box;
   padding: 6px 8px;

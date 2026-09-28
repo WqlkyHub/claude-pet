@@ -83,6 +83,29 @@ derniers échanges et une ligne pour écrire. « – » la réduit. Elle reste c
 laissée, même après un redémarrage. Quand elle est réduite, un clic sur lui ouvre toujours
 la petite ligne rapide, et ses points s'animent quand il t'a répondu.
 
+## Lui parler au micro
+
+Dans la bulle agrandie, le bouton micro à côté de la ligne pour écrire : appuie, parle, il
+s'arrête tout seul quand tu te tais (ou rappuie). Ta voix est comprise **sur ton PC** par
+whisper.cpp, puis il te répond **à voix haute** avec Piper et la voix française « Siwis ».
+Il ne parle à voix haute que quand tu lui as parlé au micro ; à l'écrit, il reste muet.
+
+La première fois, il te demande l'accord de télécharger ces outils gratuits (≈ 290 Mo), en
+te montrant chaque élément, sa taille et son adresse. Ils vont dans
+`%APPDATA%\claude-pet\voix\` et marchent ensuite sans internet. Clic droit, **Voix** pour
+ouvrir ce dossier ou tout supprimer.
+
+## Il peut installer et télécharger pour toi
+
+« Installe VLC », « télécharge ce fichier : https://... » :
+
+- **logiciels** : il cherche avec winget (le gestionnaire officiel de Windows), te montre
+  les résultats (nom, identifiant, version, source) et tu choisis lequel installer, ou rien ;
+- **fichiers** : il te montre l'adresse et la destination (ton dossier Téléchargements) et
+  attend ton clic ; si c'est un installeur (.exe, .msi), il te redemande avant de le lancer.
+
+Rien n'est téléchargé ni installé sans ton clic.
+
 ## Il peut se modifier lui-même
 
 Demande-lui simplement (« ajoute "Miaou ?" à tes phrases », « parle moins souvent »...). Il
@@ -254,6 +277,8 @@ src/
       chat.js        discussion avec Claude, reliée à l'aiguilleur et aux humeurs
       quota.js       fatigue et évolution selon ton quota Claude
       activity.js    réactions à ce que tu fais (lunettes, casque, pause, plein écran)
+      voix.js        micro (whisper.cpp) et voix (Piper), en local, après ton accord
+      installations.js installe (winget) ou télécharge pour toi, après ton accord
   preload.js         pont sécurisé entre la fenêtre et le processus principal
   renderer/
     index.html       dessin en pixel art (généré par tools-dev/dessin-axolotl.py)

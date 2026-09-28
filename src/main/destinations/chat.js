@@ -39,6 +39,10 @@ function systemPrompt({ memory = '', search = '' } = {}) {
     '  [action:code] seulement si Sacha te demande de TE modifier toi-même, le compagnon (ton apparence, ton comportement,',
     '   une nouvelle capacité, ta taille, tes phrases...) : réponds alors en une phrase que tu vas préparer la modification',
     '   et que tu lui demanderas son accord avant de l\'appliquer. Tu le fais vraiment : un atelier modifie ton code juste après.',
+    '  [installer:Nom du logiciel] si Sacha te demande d\'installer un logiciel (ex. [installer:VLC]) ;',
+    '  [telecharger:https://...] s\'il te demande de télécharger un fichier à une adresse précise.',
+    '   Pour ces deux-là, dis en une phrase que tu vas chercher et lui montrer quoi exactement avant de le faire :',
+    '   une fenêtre lui demande son accord, rien ne se fait sans son clic. Ne dis jamais que c\'est déjà fait.',
     'Exemple : [humeur:happy][projet:Claude Pet]Ta réponse...',
     'Ces balises sont retirées avant l\'affichage : ne les mentionne jamais.',
     '',
@@ -49,7 +53,7 @@ function systemPrompt({ memory = '', search = '' } = {}) {
         'recherches ciblées, pas de lecture de fichiers entiers. Si tu ne trouves pas, dis-le simplement.',
         '', search].join('\n')
       : 'Tu ne peux pas encore lire de fichiers ni agir sur l\'ordinateur : dis-le simplement si on te le demande.',
-    'Tu ne peux pas encore lancer de logiciels : ces capacités arrivent bientôt.',
+    'Tu peux télécharger et installer des logiciels (balises ci-dessus), mais pas encore lancer des logiciels.',
     '',
     memory ? `Ce dont tu te souviens :\n${memory}\n` : 'Tu n\'as encore aucun souvenir de Sacha.',
     '',
@@ -151,6 +155,20 @@ function stripTags(text) {
   return String(text || '').replace(HEADER, '');
 }
 
+// Balises oubliées au milieu ou à la fin de la réponse (ça arrive) :
+// on les récupère quand même et on les retire du texte.
+const LOOSE = /\[(projet|retenir|action|installer|telecharger|humeur):([^\]\n]*)\]/gi;
+function extractLooseTags(text, tags = { retenir: [] }) {
+  const out = { ...tags, retenir: [...(tags.retenir || [])] };
+  const clean = String(text || '').replace(LOOSE, (_m, key, value) => {
+    const k = key.toLowerCase();
+    if (k === 'retenir') out.retenir.push(value.trim());
+    else if (!out[k]) out[k] = value.trim();
+    return '';
+  }).replace(/[ \t]+\n/g, '\n').trim();
+  return { text: clean, tags: out };
+}
+
 async function handle({ text, history, memory }, io) {
   const messages = [...history, { role: 'user', content: text }];
   const stream = client().beta.messages.stream({
@@ -200,6 +218,7 @@ module.exports = {
   systemPrompt,
   moodStream,
   stripTags,
+  extractLooseTags,
   complete,
   MOOD_TAG,
   MODEL,

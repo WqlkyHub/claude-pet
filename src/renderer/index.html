@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; media-src 'self' blob:">
   <title>Claude Pet</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,7 +14,7 @@
   <section id="talk" class="talk" hidden>
     <header><span>Discussion</span><button id="talk-close" type="button" title="Réduire" aria-label="Réduire la discussion">–</button></header>
     <div id="talk-log" class="talk-log"></div>
-    <form id="talk-form" autocomplete="off"><input id="talk-input" spellcheck="false" maxlength="4000" placeholder="Dis-moi..."></form>
+    <form id="talk-form" autocomplete="off"><input id="talk-input" spellcheck="false" maxlength="4000" placeholder="Dis-moi..."><button id="talk-mic" type="button" title="Parler au micro" aria-label="Parler au micro"><i></i></button></form>
   </section>
 
   <div id="stage">

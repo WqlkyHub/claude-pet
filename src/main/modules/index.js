@@ -27,6 +27,7 @@
 // l'aiguilleur src/main/router.js (chat aujourd'hui, Claude Code et Cowork ensuite).
 // memoire.js garde tes demandes, rangées par projet, et relit ce que vous avez fait avant.
 // atelier.js lui permet de modifier son propre code, après ton accord.
+// voix.js : micro (whisper.cpp) et voix (Piper), en local ; installations.js : winget et téléchargements, après ton accord.
 // activity.js suit la fenêtre active, l'inactivité et l'heure (en local).
 // Étape prévue : actions.js (lancer musique, logiciels, sites).
 
@@ -40,6 +41,8 @@ const MODULES = [
   require('./activity'),
   require('./mise-a-jour'),
   require('./atelier'),
+  require('./voix'),
+  require('./installations'),
 ];
 
 const cleanups = [];

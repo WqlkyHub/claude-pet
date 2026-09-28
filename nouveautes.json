@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-09-28",
+    "texte": "un micro dans ma bulle : parle-moi en français, je te réponds à voix haute avec une vraie voix (seulement quand tu m'as parlé au micro)."
+  },
+  {
+    "version": "0.6.0",
+    "date": "2026-09-28",
+    "texte": "je peux télécharger et installer des logiciels pour toi : je te montre exactement quoi et d'où, et j'attends ton clic."
+  },
+  {
     "version": "0.5.0",
     "date": "2026-09-28",
     "texte": "une petite bulle à côté de moi : clique dessus pour ouvrir notre discussion, « – » pour la réduire."

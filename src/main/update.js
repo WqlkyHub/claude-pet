@@ -171,4 +171,4 @@ async function fetchHistory(known) {
   return h;
 }
 
-module.exports = { check, install, newer, source, fetchHistory, copyTree, ROOT };
+module.exports = { check, install, newer, source, fetchHistory, copyTree, unzip, ROOT };

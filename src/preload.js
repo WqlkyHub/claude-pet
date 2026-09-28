@@ -19,4 +19,8 @@ contextBridge.exposeInMainWorld('petAPI', {
   ask: (id, text) => ipcRenderer.send('chat:ask', { id, text }),
   cancelAsk: () => ipcRenderer.send('chat:cancel'),
   chatHistory: () => ipcRenderer.invoke('chat:history'),
+  // Micro et voix (module voix)
+  voiceReady: () => ipcRenderer.invoke('voice:ready'),
+  transcribe: (wav) => ipcRenderer.invoke('voice:transcribe', wav),
+  speak: (text) => ipcRenderer.invoke('voice:speak', text),
 });

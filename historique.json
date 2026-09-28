@@ -1,5 +1,5 @@
 {
-  "maj": "2026-09-28T18:45:00Z",
+  "maj": "2026-09-28T20:30:00Z",
   "note": "Tenu à jour par Claude dans l'app (projet « Claude Pet »). Le compagnon le relit toutes les 6 heures.",
   "projets": [
     {
@@ -37,6 +37,10 @@
         {
           "date": "2026-09-28",
           "texte": "Version 0.5.0 : bulle de discussion repliable à côté du pet, et atelier pour qu'il modifie son propre code sur demande, après accord de Sacha."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Version 0.6.0 : micro dans la bulle (reconnaissance vocale whisper.cpp, en local), voix française naturelle Piper « Siwis » utilisée seulement quand Sacha a parlé au micro, et installations de logiciels (winget) ou téléchargements sur demande, toujours après un clic de Sacha."
         }
       ]
     }

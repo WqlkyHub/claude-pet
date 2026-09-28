@@ -131,6 +131,11 @@ module.exports = {
       try {
         const { history, memory, search } = pet.memory.prepare(text, { sinceReset: resetAt() });
         const result = await router.dispatch({ text, history, memory, search }, io);
+        if (!result.refused) {
+          const loose = chatDestination.extractLooseTags(result.reply, result.tags);
+          result.reply = loose.text;
+          result.tags = loose.tags;
+        }
         if (result.refused) {
           pet.send({ type: 'chat-error', id, message: 'Je préfère ne pas répondre à ça.' });
           pet.setMood('surprised', 2500);
@@ -145,9 +150,12 @@ module.exports = {
         } catch (err) {
           console.error('Impossible de ranger cet échange :', err);
         }
-        pet.send({ type: 'chat-done', id, projet });
+        pet.send({ type: 'chat-done', id, projet, text: result.reply });
         // Il doit se modifier lui-même : l'atelier prépare la modification et demande ton accord.
         if (result.tags && result.tags.action === 'code' && pet.selfEdit) pet.selfEdit.start(text);
+        // Télécharger ou installer : il montre d'abord quoi exactement et attend ton clic.
+        if (result.tags && result.tags.installer && pet.installer) pet.installer.software(result.tags.installer);
+        if (result.tags && result.tags.telecharger && pet.installer) pet.installer.file(result.tags.telecharger);
         pet.setMood(result.mood, 4000);
         if (result.mood === 'happy' || result.mood === 'love') pet.play('hop');
         pet.bus.emit('xp', { amount: 3, reason: 'discussions' });
