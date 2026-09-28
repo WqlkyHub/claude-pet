@@ -16,11 +16,12 @@ contextBridge.exposeInMainWorld('petAPI', {
   // Discussion avec Claude (module chat)
   chatState: () => ipcRenderer.invoke('chat:state'),
   saveKey: (key) => ipcRenderer.invoke('chat:save-key', key),
-  ask: (id, text) => ipcRenderer.send('chat:ask', { id, text }),
+  ask: (id, text, oral = false) => ipcRenderer.send('chat:ask', { id, text, oral }),
   cancelAsk: () => ipcRenderer.send('chat:cancel'),
   chatHistory: () => ipcRenderer.invoke('chat:history'),
   // Micro et voix (module voix)
   voiceReady: () => ipcRenderer.invoke('voice:ready'),
   transcribe: (wav) => ipcRenderer.invoke('voice:transcribe', wav),
   speak: (text) => ipcRenderer.invoke('voice:speak', text),
+  wakeCheck: (wav) => ipcRenderer.invoke('voice:wake-check', wav),
 });

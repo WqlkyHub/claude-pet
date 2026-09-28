@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.7.0",
+    "date": "2026-09-28",
+    "texte": "appelle-moi « hey Axo » ou « dis Axo » sans cliquer : à activer par clic droit, Voix."
+  },
+  {
+    "version": "0.7.0",
+    "date": "2026-09-28",
+    "texte": "à l'oral je réponds plus court, comme une vraie discussion, et je parle un peu plus vite."
+  },
+  {
+    "version": "0.7.0",
+    "date": "2026-09-28",
+    "texte": "la bulle de discussion se range quand tu cliques ailleurs ou que tu me déplaces."
+  },
+  {
     "version": "0.6.0",
     "date": "2026-09-28",
     "texte": "un micro dans ma bulle : parle-moi en français, je te réponds à voix haute avec une vraie voix (seulement quand tu m'as parlé au micro)."

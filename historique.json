@@ -1,5 +1,5 @@
 {
-  "maj": "2026-09-28T20:30:00Z",
+  "maj": "2026-09-28T19:40:00Z",
   "note": "Tenu à jour par Claude dans l'app (projet « Claude Pet »). Le compagnon le relit toutes les 6 heures.",
   "projets": [
     {
@@ -41,6 +41,10 @@
         {
           "date": "2026-09-28",
           "texte": "Version 0.6.0 : micro dans la bulle (reconnaissance vocale whisper.cpp, en local), voix française naturelle Piper « Siwis » utilisée seulement quand Sacha a parlé au micro, et installations de logiciels (winget) ou téléchargements sur demande, toujours après un clic de Sacha."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Version 0.7.0 : appel vocal « hey Axo » / « dis Axo » (option du menu Voix, écoute locale avec un petit modèle whisper), réponses orales plus courtes et naturelles, voix un peu plus rapide, et la bulle de discussion se range quand Sacha clique ailleurs ou déplace le compagnon."
         }
       ]
     }

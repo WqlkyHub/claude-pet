@@ -14,7 +14,7 @@ const MOOD_TAG = /^\s*\[humeur:([a-z]+)\]\s*/; // (ancienne balise seule, gardé
 
 // `memory` : ce qu'il se rappelle (voir src/main/memory/context.js).
 // `search`  : où il peut fouiller lui-même, s'il a ses outils de lecture.
-function systemPrompt({ memory = '', search = '' } = {}) {
+function systemPrompt({ memory = '', search = '', oral = false } = {}) {
   const now = new Date().toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
   return [
     'Tu es Claude, et tu vis sur le bureau Windows de Sacha sous la forme d\'un petit compagnon en pixel art',
@@ -26,6 +26,14 @@ function systemPrompt({ memory = '', search = '' } = {}) {
     'Tes réponses s\'affichent dans la petite bulle de dialogue du compagnon, au-dessus de sa tête : réponds en français,',
     'en une à trois phrases, en texte simple (pas de markdown, pas de listes, pas de titres).',
     'Donne plus de détails seulement si on te le demande. Latency-sensitive: begin your visible answer immediately.',
+    ...(oral ? [
+      '',
+      'Cette fois, Sacha t\'a parlé au micro et ta réponse sera lue à voix haute : c\'est une vraie conversation orale.',
+      'Réponds comme à l\'oral entre amis : une phrase courte, deux au maximum, avec des mots simples et naturels',
+      '(« ouais », « bon », « tu vois » si ça vient tout seul). Va droit au but, sans énumération, sans parenthèses,',
+      'sans adresse web, sans symboles ni chiffres compliqués à prononcer. Si le sujet demande plus, donne l\'essentiel',
+      'et propose d\'en dire plus. Tu peux finir par une petite question pour relancer la discussion, quand c\'est naturel.',
+    ] : []),
     '',
     'Commence chaque réponse par des balises, collées, avant tout autre texte :',
     `  [humeur:X] où X est l'un de : ${MOODS.join(', ')} (happy par défaut, love pour un compliment, surprised pour`,
@@ -169,7 +177,7 @@ function extractLooseTags(text, tags = { retenir: [] }) {
   return { text: clean, tags: out };
 }
 
-async function handle({ text, history, memory }, io) {
+async function handle({ text, history, memory, oral }, io) {
   const messages = [...history, { role: 'user', content: text }];
   const stream = client().beta.messages.stream({
     model: MODEL,
@@ -179,7 +187,7 @@ async function handle({ text, history, memory }, io) {
     // l'API la relance d'elle-même sur un autre modèle adapté.
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-    system: systemPrompt({ memory }),
+    system: systemPrompt({ memory, oral }),
     messages,
   }, { signal: io.signal });
 

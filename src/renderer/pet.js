@@ -278,6 +278,7 @@
     dragging = true;
     setIgnore(false);
     petEl.classList.add('dragging');
+    if (talk.open) setTalk(false); // on le déplace : la discussion se range
     setMood('surprised');
     if (Math.random() < 0.5) say(pick(PHRASES.drag), 1500);
     api.dragStart();
@@ -503,7 +504,7 @@
     }
     hideBubble();
     setMood('thinking');
-    api.ask(id, text);
+    api.ask(id, text, spoken);
   }
 
   // Formatage minimal : Claude répond en texte simple, on retire le markdown restant.
@@ -697,6 +698,90 @@
     }
   }
 
+  // ------------------------------------------------------------------
+  // Appel « hey Axo » (option du menu « Voix ») : le micro reste ouvert, il
+  // découpe ce qu'il entend en petites phrases et ne fait vérifier que les
+  // courtes (sur ton PC) pour y chercher son nom. Il se tait pendant qu'il
+  // t'écoute au micro ou qu'il parle, pour ne pas s'entendre lui-même.
+  // ------------------------------------------------------------------
+
+  const wakeWord = { on: false, stream: null, ctx: null, checking: false };
+  const wakeDot = document.getElementById('wake-dot');
+
+  async function startWake() {
+    if (wakeWord.stream) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+      if (!wakeWord.on) { stream.getTracks().forEach((t) => t.stop()); return; }
+      const ctx = new AudioContext({ sampleRate: 16000 });
+      const src = ctx.createMediaStreamSource(stream);
+      const proc = ctx.createScriptProcessor(4096, 1, 1);
+      wakeWord.stream = stream;
+      wakeWord.ctx = ctx;
+      let chunks = [];
+      let speech = 0;
+      let quietFor = 0;
+      let lead = null; // le petit bout juste avant, pour ne pas couper le « hey »
+      proc.onaudioprocess = (e) => {
+        const data = new Float32Array(e.inputBuffer.getChannelData(0));
+        const ms = (data.length / ctx.sampleRate) * 1000;
+        if (voice.rec || voice.audio || wakeWord.checking || micBtn.classList.contains('busy')) {
+          chunks = []; speech = 0; lead = data; return;
+        }
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+        const loud = Math.sqrt(sum / data.length) > 0.02;
+        if (!chunks.length) {
+          if (!loud) { lead = data; return; }
+          if (lead) chunks.push(lead);
+        }
+        chunks.push(data);
+        if (loud) { speech += ms; quietFor = 0; } else quietFor += ms;
+        const total = chunks.length * ms;
+        if (quietFor > 600 || total > 6000) {
+          const clip = chunks;
+          const useful = speech >= 300 && total <= 6000; // trop long : sûrement une conversation ou de la musique
+          chunks = []; speech = 0; quietFor = 0; lead = null;
+          if (useful) checkWake(wavFrom(clip, ctx.sampleRate));
+        }
+      };
+      src.connect(proc);
+      proc.connect(ctx.destination);
+      wakeDot.hidden = false;
+    } catch (err) {
+      wakeWord.on = false;
+      wakeDot.hidden = true;
+      say('Je n\'ai pas accès au micro pour entendre mon nom. Vérifie Paramètres Windows → Confidentialité → Microphone.', 7000);
+    }
+  }
+
+  function stopWake() {
+    if (wakeWord.stream) wakeWord.stream.getTracks().forEach((t) => t.stop());
+    if (wakeWord.ctx) wakeWord.ctx.close();
+    wakeWord.stream = null;
+    wakeWord.ctx = null;
+    wakeDot.hidden = true;
+  }
+
+  async function checkWake(wav) {
+    wakeWord.checking = true;
+    try {
+      const { hit, reste } = await api.wakeCheck(wav);
+      if (!hit || !wakeWord.on) return;
+      if (baseMood === 'sleeping') wake();
+      play('hop');
+      if (reste) ask(reste, { voice: true }); // « dis Axo, quelle heure est-il ? »
+      else toggleMic(); // « hey Axo » tout court : il t'écoute
+    } catch { /* on écoutera la prochaine phrase */ } finally {
+      wakeWord.checking = false;
+    }
+  }
+
+  function setWakeWord(on) {
+    wakeWord.on = Boolean(on);
+    if (wakeWord.on) startWake(); else stopWake();
+  }
+
   // Il fouille dans ses souvenirs : petite phrase d'attente en gris.
   function onChatStatus({ id, status }) {
     if (id !== chat.answering) return;
@@ -879,6 +964,11 @@
   }
 
   talkToggle.addEventListener('click', () => setTalk(true));
+  // Un clic ailleurs que sur lui (sur le bureau, une autre fenêtre) range la
+  // discussion, sauf s'il est en train de t'écouter au micro.
+  window.addEventListener('blur', () => {
+    if (talk.open && !voice.rec && !micBtn.classList.contains('busy')) setTalk(false);
+  });
   document.getElementById('talk-close').addEventListener('click', () => setTalk(false));
   document.getElementById('talk-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -913,6 +1003,7 @@
       case 'chat-reset': onChatReset(cmd); break;
       case 'chat-error': onChatError(cmd); break;
       case 'voice-status': setVoiceStatus(cmd.status); break;
+      case 'wake-word': setWakeWord(cmd.on); break;
       case 'gear': setGear(cmd.items); break;
       case 'groove': petEl.classList.toggle('grooving', Boolean(cmd.on)); break;
       case 'notes': notes(); break;

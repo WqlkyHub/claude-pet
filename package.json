@@ -1,6 +1,6 @@
 {
   "name": "claude-pet",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Un petit compagnon vivant sur ton bureau, qui parle avec Claude.",
   "main": "src/main/main.js",
   "private": true,

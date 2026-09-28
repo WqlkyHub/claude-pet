@@ -80,7 +80,8 @@ API, c'est Claude Opus 5 (`MODEL` en haut de `src/main/destinations/chat.js`).
 
 À côté de lui, une petite bulle « ... ». Un clic l'agrandit en fil de discussion : vos
 derniers échanges et une ligne pour écrire. « – » la réduit. Elle reste comme tu l'as
-laissée, même après un redémarrage. Quand elle est réduite, un clic sur lui ouvre toujours
+laissée, même après un redémarrage, et se range quand tu cliques ailleurs ou que tu le
+déplaces. Quand elle est réduite, un clic sur lui ouvre toujours
 la petite ligne rapide, et ses points s'animent quand il t'a répondu.
 
 ## Lui parler au micro
@@ -88,12 +89,20 @@ la petite ligne rapide, et ses points s'animent quand il t'a répondu.
 Dans la bulle agrandie, le bouton micro à côté de la ligne pour écrire : appuie, parle, il
 s'arrête tout seul quand tu te tais (ou rappuie). Ta voix est comprise **sur ton PC** par
 whisper.cpp, puis il te répond **à voix haute** avec Piper et la voix française « Siwis ».
-Il ne parle à voix haute que quand tu lui as parlé au micro ; à l'écrit, il reste muet.
+Il ne parle à voix haute que quand tu lui as parlé au micro ; à l'écrit, il reste muet. À l'oral, il répond
+plus court, comme dans une vraie discussion.
 
 La première fois, il te demande l'accord de télécharger ces outils gratuits (≈ 290 Mo), en
 te montrant chaque élément, sa taille et son adresse. Ils vont dans
 `%APPDATA%\claude-pet\voix\` et marchent ensuite sans internet. Clic droit, **Voix** pour
 ouvrir ce dossier ou tout supprimer.
+
+**L'appeler sans cliquer** : clic droit, **Voix**, **M'appeler « hey Axo »**. Dis « hey Axo »
+(il t'écoute) ou « dis Axo, quelle heure est-il ? » (il répond directement). Le micro reste
+alors ouvert, mais seules tes phrases courtes sont vérifiées, sur ton PC, pour y chercher son
+nom ; rien n'est gardé ni envoyé. Un petit point orange clignote à côté de lui tant que
+l'écoute est active ; décoche l'option pour la couper. Elle télécharge un petit modèle de
+plus (≈ 57 Mo), après ton accord.
 
 ## Il peut installer et télécharger pour toi
 

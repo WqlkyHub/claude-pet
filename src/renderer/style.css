@@ -761,3 +761,18 @@ body:has(#pet[data-stage="3"]) .talk { bottom: 148px; }
   border: none;
   outline: none;
 }
+
+/* Petit point : il écoute si tu l'appelles « hey Axo » */
+.wake-dot {
+  position: absolute;
+  left: calc(50% + 58px);
+  bottom: 92px;
+  width: 5px;
+  height: 5px;
+  background: #D97757;
+  box-shadow: 1px 1px 0 rgba(58, 31, 23, 0.3);
+  animation: wake-dot 2.4s steps(2) infinite;
+  pointer-events: none;
+}
+.wake-dot[hidden] { display: none; }
+@keyframes wake-dot { 50% { opacity: 0.35; } }

@@ -114,7 +114,7 @@ function failure(kind, message) {
 
 // `memory` : ce dont il se souvient ; `search` : { help, cwd, dirs } pour
 // fouiller lui-même en lecture seule (absent = aucun outil).
-function handle({ text, history, memory, search }, io) {
+function handle({ text, history, memory, search, oral }, io) {
   const exe = findClaude();
   if (!exe) {
     return Promise.reject(failure('missing',
@@ -124,7 +124,7 @@ function handle({ text, history, memory, search }, io) {
     ...search.dirs.flatMap((d) => ['--add-dir', d])] : ['--tools', ''];
   const args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
     ...tools, '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence',
-    '--effort', EFFORT, '--system-prompt-file', promptFile({ memory, search: search && search.help })];
+    '--effort', EFFORT, '--system-prompt-file', promptFile({ memory, search: search && search.help, oral })];
 
   return new Promise((resolve, reject) => {
     const child = run(exe, args, { cwd: (search && search.cwd) || app.getPath('userData'), stdio: ['pipe', 'pipe', 'pipe'] });

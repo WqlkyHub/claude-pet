@@ -115,7 +115,7 @@ module.exports = {
       if (current) current.abort();
     });
 
-    ipcMain.on('chat:ask', async (_e, { id, text }) => {
+    ipcMain.on('chat:ask', async (_e, { id, text, oral = false }) => {
       if (current) current.abort();
       const controller = new AbortController();
       current = controller;
@@ -130,7 +130,7 @@ module.exports = {
 
       try {
         const { history, memory, search } = pet.memory.prepare(text, { sinceReset: resetAt() });
-        const result = await router.dispatch({ text, history, memory, search }, io);
+        const result = await router.dispatch({ text, history, memory, search, oral }, io);
         if (!result.refused) {
           const loose = chatDestination.extractLooseTags(result.reply, result.tags);
           result.reply = loose.text;

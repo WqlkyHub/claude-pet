@@ -4,6 +4,7 @@
 //   - ta voix devient du texte avec whisper.cpp (modèle « small », en français) ;
 //   - sa réponse devient une voix avec Piper (voix française « Siwis »).
 // Il ne répond à voix haute que quand tu lui as parlé au micro.
+// Option (menu « Voix ») : l'appeler « hey Axo » ou « dis Axo », sans cliquer.
 //
 // Ces deux outils (≈ 290 Mo en tout) ne sont téléchargés qu'une fois, la
 // première fois que tu appuies sur le micro, et seulement après ton accord :
@@ -44,10 +45,35 @@ const PARTS = [
   },
 ];
 
+// Pour l'appel « hey Axo » : un modèle plus léger et plus rapide, qui ne sert
+// qu'à reconnaître son nom. Téléchargé seulement si tu actives l'option.
+const WAKE_PART = {
+  id: 'whisper-base',
+  nom: 'petit modèle « base » pour reconnaître « hey Axo » (rapide)',
+  url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin',
+  taille: 57, file: 'ggml-base-q5_1.bin', check: 'ggml-base-q5_1.bin',
+};
+
+// « hey Axo », « dis Axo », « et Axo »… et ce que whisper croit parfois entendre.
+const WAKE = /\b(?:h?e[yi]|hé|he|et|ok|dis|dit|di|allo|coucou|salut)[\s,!.-]*(?:axo|axos|axel|axeau|axau|aksso|akso|haxo|axolotl|a xo|acso|axe? au)\b[\s,!.?-]*(.*)$/i;
+
+// Renvoie { hit, reste } : reste = ce que tu as dit juste après son nom.
+function matchWake(text) {
+  const t = String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/\[[^\]]*\]|\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  const m = t.match(WAKE);
+  if (!m) return { hit: false, reste: '' };
+  // On reprend la suite dans le texte d'origine (avec ses accents).
+  const words = String(text).replace(/\[[^\]]*\]|\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim().split(' ');
+  const keep = m[1].trim() ? m[1].trim().split(' ').length : 0;
+  const reste = keep ? words.slice(-keep).join(' ').replace(/^[\s,!.-]+/, '') : '';
+  return { hit: true, reste: reste.length > 3 ? reste[0].toUpperCase() + reste.slice(1) : '' };
+}
+
 const FAKE = process.env.CLAUDE_PET_VOICE_FAKE === '1'; // tests : pas de vrais outils
 
 function dir() { return path.join(app.getPath('userData'), 'voix'); }
-const missing = () => (FAKE ? [] : PARTS.filter((p) => !fs.existsSync(path.join(dir(), p.check))));
+const missing = (parts = PARTS) => (FAKE ? [] : parts.filter((p) => !fs.existsSync(path.join(dir(), p.check))));
 
 async function download(url, dest, onProgress) {
   const res = await net.fetch(url);
@@ -106,16 +132,17 @@ module.exports = {
     let installing = null;
 
     // S'assure que les outils sont là ; sinon demande ton accord et les télécharge.
-    async function ensure() {
-      const todo = missing();
+    async function ensure({ wake = false } = {}) {
+      const todo = missing(wake ? [...PARTS, WAKE_PART] : PARTS);
       if (!todo.length) return true;
       if (installing) return installing;
       const win = BrowserWindow.getAllWindows()[0];
       const total = todo.reduce((s, p) => s + p.taille, 0);
+      const why = wake ? 'Pour que tu puisses m\'appeler « hey Axo » et me parler' : 'Pour t\'écouter et te répondre à voix haute';
       const { response } = await dialog.showMessageBox(win, {
         type: 'question',
         title: 'Claude Pet demande ton accord',
-        message: `Pour t'écouter et te répondre à voix haute, je dois télécharger ${todo.length} éléments (≈ ${total} Mo). Je peux ?`,
+        message: `${why}, je dois télécharger ${todo.length > 1 ? `${todo.length} éléments` : '1 élément'} (≈ ${total} Mo). Je peux ?`,
         detail: `${todo.map((p) => `• ${p.nom} — ${p.taille} Mo\n   ${p.url}`).join('\n')}\n\n`
           + `Rangés dans : ${dir()}\nGratuits, open source, et tout fonctionne ensuite sans internet. `
           + 'Rien d\'autre n\'est installé ni modifié sur ton PC.',
@@ -158,6 +185,35 @@ module.exports = {
 
     ipcMain.handle('voice:ready', () => ensure());
 
+    // Appel « hey Axo » : le micro reste ouvert, mais seules tes phrases courtes
+    // sont écoutées, sur ton PC, pour y chercher son nom. Rien n'est gardé.
+    const wakeOn = () => pet.settings.get('wakeWord', false);
+    const sendWake = () => pet.send({ type: 'wake-word', on: Boolean(wakeOn() && !missing([...PARTS, WAKE_PART]).length) });
+    async function setWake(on) {
+      if (on && !(await ensure({ wake: true }))) { pet.settings.set('wakeWord', false); sendWake(); return; }
+      pet.settings.set('wakeWord', on);
+      sendWake();
+      pet.say(on ? 'Appelle-moi « hey Axo » ou « dis Axo », je t\'écoute !' : 'D\'accord, je n\'écoute plus mon nom.', { duration: 5000 });
+    }
+    pet.bus.once('ready', () => setTimeout(sendWake, 1500));
+
+    ipcMain.handle('voice:wake-check', async (_e, wav) => {
+      if (!wakeOn()) return { hit: false, reste: '' };
+      if (FAKE) return matchWake(process.env.CLAUDE_PET_WAKE_TEXT || 'Hey Axo !');
+      const file = path.join(os.tmpdir(), `claude-pet-appel-${Date.now()}.wav`);
+      fs.writeFileSync(file, Buffer.from(wav));
+      try {
+        const cli = path.join(dir(), 'whisper', 'Release', 'whisper-cli.exe');
+        const out = await exec(cli, ['-m', path.join(dir(), WAKE_PART.file), '-l', 'fr', '-nt', '-np',
+          '--prompt', 'Hey Axo ! Dis Axo.', '-f', file]);
+        return matchWake(out);
+      } catch {
+        return { hit: false, reste: '' };
+      } finally {
+        fs.rmSync(file, { force: true });
+      }
+    });
+
     // Ta voix (WAV 16 kHz mono) → texte.
     ipcMain.handle('voice:transcribe', async (_e, wav) => {
       if (FAKE) return process.env.CLAUDE_PET_VOICE_TEXT || 'Bonjour, tu m\'entends ?';
@@ -180,7 +236,7 @@ module.exports = {
       const file = path.join(os.tmpdir(), `claude-pet-voix-${Date.now()}.wav`);
       try {
         const piper = path.join(dir(), 'piper', 'piper.exe');
-        await exec(piper, ['--model', path.join(dir(), 'fr_FR-siwis-medium.onnx'), '--output_file', file, '--sentence_silence', '0.2'],
+        await exec(piper, ['--model', path.join(dir(), 'fr_FR-siwis-medium.onnx'), '--output_file', file, '--sentence_silence', '0.2', '--length_scale', '0.9'],
           { input: `${clean}\n`, cwd: path.join(dir(), 'piper') });
         return fs.readFileSync(file);
       } finally {
@@ -192,6 +248,10 @@ module.exports = {
       label: 'Voix',
       submenu: [
         { label: missing().length ? 'Voix : pas encore téléchargée (appuie sur le micro)' : 'Voix : prête', enabled: false },
+        {
+          label: 'M\'appeler « hey Axo » (micro toujours ouvert)', type: 'checkbox', checked: wakeOn(),
+          click: (item) => setWake(item.checked),
+        },
         { label: 'Ouvrir le dossier de la voix', enabled: fs.existsSync(dir()), click: () => shell.openPath(dir()) },
         {
           label: 'Supprimer la voix et la reconnaissance vocale...',
@@ -202,10 +262,14 @@ module.exports = {
               type: 'question', title: 'Claude Pet demande ton accord', message: 'Je supprime ma voix et la reconnaissance vocale (≈ 290 Mo) ?',
               detail: dir(), buttons: ['Supprimer', 'Annuler'], defaultId: 1, cancelId: 1, noLink: true,
             });
-            if (response === 0) fs.rmSync(dir(), { recursive: true, force: true });
+            if (response !== 0) return;
+            pet.settings.set('wakeWord', false);
+            sendWake();
+            fs.rmSync(dir(), { recursive: true, force: true });
           },
         },
       ],
     }]);
   },
+  matchWake,
 };
