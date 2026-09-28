@@ -491,6 +491,7 @@
   function ask(text, { voice: spoken = false } = {}) {
     const id = `q${Date.now()}`;
     if (spoken) voice.speakFor = id; // tu lui as parlé au micro : il répondra à voix haute
+    voice.convo = spoken; // à l'écrit, la discussion vocale s'arrête
     chat.answering = id;
     chat.text = '';
     chat.status = '';
@@ -592,7 +593,7 @@
   // ------------------------------------------------------------------
 
   const micBtn = document.getElementById('talk-mic');
-  const voice = { rec: null, speakFor: null, audio: null };
+  const voice = { rec: null, speakFor: null, audio: null, convo: false };
 
   function wavFrom(chunks, rate) {
     const n = chunks.reduce((a, c) => a + c.length, 0);
@@ -608,7 +609,7 @@
     return buf;
   }
 
-  async function record() {
+  async function record({ firstWait = 8000 } = {}) {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
     const ctx = new AudioContext({ sampleRate: 16000 });
     const src = ctx.createMediaStreamSource(stream);
@@ -636,7 +637,7 @@
         const ms = (data.length / ctx.sampleRate) * 1000;
         if (loud) { heard = true; quietFor = 0; } else quietFor += ms;
         const elapsed = performance.now() - started;
-        if ((heard && quietFor > 1400) || elapsed > 30000 || (!heard && elapsed > 8000)) stop();
+        if ((heard && quietFor > 1400) || elapsed > 30000 || (!heard && elapsed > firstWait)) stop();
       };
       src.connect(proc);
       proc.connect(ctx.destination);
@@ -648,26 +649,41 @@
     else if (status) say(status, 4000);
   }
 
-  async function toggleMic() {
-    if (voice.audio) { voice.audio.pause(); voice.audio = null; }
-    if (voice.rec) { voice.rec.stop(); return; }
+  // Écoute une phrase puis la pose à Claude. `suite` : il vient de te répondre
+  // dans une discussion vocale et t'écoute encore, sans rien dire, jusqu'à ce
+  // que tu te taises vraiment (alors la discussion s'arrête).
+  async function listenAndAsk({ suite = false } = {}) {
     if (micBtn.classList.contains('busy')) return;
     micBtn.classList.add('busy');
     try {
-      if (!(await api.voiceReady())) return;
+      if (!suite && !(await api.voiceReady())) return;
       micBtn.classList.add('recording');
-      setVoiceStatus('Je t\'écoute…');
+      wakeDot.classList.add('live');
+      if (!suite) setVoiceStatus('Je t\'écoute…');
       setMood('surprised');
-      const wav = await record();
+      const wav = await record({ firstWait: suite ? 7000 : 8000 });
       micBtn.classList.remove('recording');
-      if (!wav) { setVoiceStatus(''); setMood(baseMood); talkLine('info', 'Je n\'ai rien entendu.'); return; }
+      wakeDot.classList.remove('live');
+      if (!wav) {
+        voice.convo = false;
+        setVoiceStatus('');
+        setMood(baseMood);
+        if (!suite) talkLine('info', 'Je n\'ai rien entendu.');
+        return;
+      }
       setVoiceStatus('Je transcris…');
       setMood('thinking');
       const text = await api.transcribe(wav);
       setVoiceStatus('');
-      if (!text) { setMood(baseMood); talkLine('info', 'Je n\'ai pas compris, tu peux répéter ?'); return; }
+      if (!text) {
+        setMood(baseMood);
+        if (suite) { voice.convo = false; return; }
+        talkLine('info', 'Je n\'ai pas compris, tu peux répéter ?');
+        return;
+      }
       ask(text, { voice: true });
     } catch (err) {
+      voice.convo = false;
       setVoiceStatus('');
       setMood('dizzy', 2000);
       talkLine('info', /Permission|NotAllowed|NotFound/i.test(String(err && err.name) + err)
@@ -675,26 +691,40 @@
         : `Le micro n'a pas marché : ${err.message || err}`);
     } finally {
       micBtn.classList.remove('busy', 'recording');
+      wakeDot.classList.remove('live');
     }
+  }
+
+  // Après avoir parlé, il te laisse la parole, comme dans une vraie discussion.
+  function continueConvo() {
+    if (!voice.convo || voice.rec || chat.answering) return;
+    setTimeout(() => { if (voice.convo && !voice.rec && !chat.answering) listenAndAsk({ suite: true }); }, 250);
+  }
+
+  function toggleMic() {
+    if (voice.audio) { voice.audio.pause(); voice.audio = null; }
+    if (voice.rec) { voice.rec.stop(); return; }
+    listenAndAsk();
   }
   micBtn.addEventListener('click', toggleMic);
 
   async function speakAloud(text) {
-    if (!text.trim()) return;
+    if (!text.trim()) { continueConvo(); return; }
     try {
       const wav = await api.speak(text);
-      if (!wav) return;
+      if (!wav) { continueConvo(); return; }
       const url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
       const audio = new Audio(url);
       voice.audio = audio;
       petEl.classList.add('speaking');
       const done = () => { petEl.classList.remove('speaking'); URL.revokeObjectURL(url); if (voice.audio === audio) voice.audio = null; };
-      audio.addEventListener('ended', done);
+      audio.addEventListener('ended', () => { done(); continueConvo(); });
       audio.addEventListener('pause', done);
       await audio.play();
     } catch (err) {
       petEl.classList.remove('speaking');
       talkLine('info', `Je n'arrive pas à parler : ${err.message || err}`);
+      continueConvo();
     }
   }
 
@@ -725,7 +755,7 @@
       proc.onaudioprocess = (e) => {
         const data = new Float32Array(e.inputBuffer.getChannelData(0));
         const ms = (data.length / ctx.sampleRate) * 1000;
-        if (voice.rec || voice.audio || wakeWord.checking || micBtn.classList.contains('busy')) {
+        if (voice.rec || voice.audio || voice.convo || wakeWord.checking || micBtn.classList.contains('busy')) {
           chunks = []; speech = 0; lead = data; return;
         }
         let sum = 0;

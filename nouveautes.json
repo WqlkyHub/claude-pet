@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.8.0",
+    "date": "2026-09-28",
+    "texte": "une vraie discussion à voix haute : après t'avoir répondu, je t'écoute encore, jusqu'à ce que tu te taises."
+  },
+  {
+    "version": "0.8.0",
+    "date": "2026-09-28",
+    "texte": "quand je te pose une question, j'attends ta réponse avant d'agir."
+  },
+  {
+    "version": "0.8.0",
+    "date": "2026-09-28",
+    "texte": "je peux ouvrir tes logiciels (« ouvre Spotify ») et des sites dans ton navigateur (« lance Netflix »)."
+  },
+  {
     "version": "0.7.0",
     "date": "2026-09-28",
     "texte": "appelle-moi « hey Axo » ou « dis Axo » sans cliquer : à activer par clic droit, Voix."

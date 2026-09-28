@@ -776,3 +776,5 @@ body:has(#pet[data-stage="3"]) .talk { bottom: 148px; }
 }
 .wake-dot[hidden] { display: none; }
 @keyframes wake-dot { 50% { opacity: 0.35; } }
+/* Il t'écoute (discussion vocale) : le point s'allume */
+.wake-dot.live, .wake-dot.live[hidden] { display: block; background: #D0453A; animation: wake-dot 0.6s steps(2) infinite; }

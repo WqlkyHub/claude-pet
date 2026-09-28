@@ -151,6 +151,13 @@ module.exports = {
           console.error('Impossible de ranger cet échange :', err);
         }
         pet.send({ type: 'chat-done', id, projet, text: result.reply });
+        // Il vient de te poser une question : il attend ta réponse avant d'agir.
+        const asking = /\?\s*[»")]*\s*$/.test(result.reply || '');
+        if (asking && result.tags) {
+          for (const k of ['action', 'installer', 'telecharger']) delete result.tags[k];
+        }
+        if (result.tags && result.tags.lancer && pet.opener) pet.opener.app(result.tags.lancer);
+        if (result.tags && result.tags.site && pet.opener) pet.opener.site(result.tags.site);
         // Il doit se modifier lui-même : l'atelier prépare la modification et demande ton accord.
         if (result.tags && result.tags.action === 'code' && pet.selfEdit) pet.selfEdit.start(text);
         // Télécharger ou installer : il montre d'abord quoi exactement et attend ton clic.

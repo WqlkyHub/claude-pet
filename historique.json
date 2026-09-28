@@ -1,10 +1,10 @@
 {
-  "maj": "2026-09-28T19:40:00Z",
+  "maj": "2026-09-28T21:10:00Z",
   "note": "Tenu à jour par Claude dans l'app (projet « Claude Pet »). Le compagnon le relit toutes les 6 heures.",
   "projets": [
     {
       "nom": "Claude Pet",
-      "resume": "Le compagnon de bureau que Sacha construit avec Claude dans l'app Claude (app Electron pour Windows) : un axolotl orange en pixel art qui évolue en dragon puis en dragon céleste, toujours au premier plan, qui discute par l'abonnement Claude via Claude Code, se souvient de tout et range les demandes par projet, et se met à jour en un clic. Prochaines étapes : lancer musique, logiciels et sites ; chercher des fichiers et diagnostiquer des problèmes ; choisir tout seul entre discussion, Claude Code et Cowork.",
+      "resume": "Le compagnon de bureau que Sacha construit avec Claude dans l'app Claude (app Electron pour Windows) : un axolotl orange en pixel art qui évolue en dragon puis en dragon céleste, toujours au premier plan, qui discute par l'abonnement Claude via Claude Code, se souvient de tout et range les demandes par projet, et se met à jour en un clic. Prochaines étapes : une voix plus naturelle qui colle au personnage ; chercher des fichiers et diagnostiquer des problèmes ; choisir tout seul entre discussion, Claude Code et Cowork.",
       "evenements": [
         {
           "date": "2026-09-28",
@@ -45,6 +45,10 @@
         {
           "date": "2026-09-28",
           "texte": "Version 0.7.0 : appel vocal « hey Axo » / « dis Axo » (option du menu Voix, écoute locale avec un petit modèle whisper), réponses orales plus courtes et naturelles, voix un peu plus rapide, et la bulle de discussion se range quand Sacha clique ailleurs ou déplace le compagnon."
+        },
+        {
+          "date": "2026-09-28",
+          "texte": "Version 0.8.0 : discussion vocale continue (il réécoute après avoir parlé, s'arrête après un vrai silence), il n'agit plus quand il vient de poser une question, et il ouvre les logiciels de Sacha (menu Démarrer) ou des sites dans le navigateur par défaut, sans fenêtre d'accord (option pour l'exiger). Sacha trouve la voix Piper trop robotique : recherche d'une meilleure voix en cours."
         }
       ]
     }

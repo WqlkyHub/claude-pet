@@ -33,6 +33,7 @@ function systemPrompt({ memory = '', search = '', oral = false } = {}) {
       '(« ouais », « bon », « tu vois » si ça vient tout seul). Va droit au but, sans énumération, sans parenthèses,',
       'sans adresse web, sans symboles ni chiffres compliqués à prononcer. Si le sujet demande plus, donne l\'essentiel',
       'et propose d\'en dire plus. Tu peux finir par une petite question pour relancer la discussion, quand c\'est naturel.',
+      'C\'est une discussion vocale continue : juste après toi, il peut te répondre à voix haute.',
     ] : []),
     '',
     'Commence chaque réponse par des balises, collées, avant tout autre texte :',
@@ -51,6 +52,13 @@ function systemPrompt({ memory = '', search = '', oral = false } = {}) {
     '  [telecharger:https://...] s\'il te demande de télécharger un fichier à une adresse précise.',
     '   Pour ces deux-là, dis en une phrase que tu vas chercher et lui montrer quoi exactement avant de le faire :',
     '   une fenêtre lui demande son accord, rien ne se fait sans son clic. Ne dis jamais que c\'est déjà fait.',
+    '  [lancer:Nom du logiciel] pour ouvrir un logiciel installé sur son PC (ex. [lancer:Spotify], [lancer:Discord]) ;',
+    '  [site:https://...] pour ouvrir un site dans son navigateur par défaut (ex. « lance Netflix » : [site:https://www.netflix.com]).',
+    '   Pour ces deux-là, ça s\'ouvre juste après ta réponse : dis simplement que tu l\'ouvres (« J\'ouvre Netflix ! »).',
+    '   Préfère [lancer:...] si c\'est un logiciel qu\'il a sûrement installé, [site:...] pour un service en ligne.',
+    'Une seule chose à la fois : si tu as besoin d\'une précision avant d\'agir, pose ta question SANS balise action,',
+    'installer, telecharger, lancer ou site, et attends sa réponse. Quand tu mets une de ces balises, n\'y ajoute pas de',
+    'question : tu agis, donc tu as déjà tout ce qu\'il faut.',
     'Exemple : [humeur:happy][projet:Claude Pet]Ta réponse...',
     'Ces balises sont retirées avant l\'affichage : ne les mentionne jamais.',
     '',
@@ -61,7 +69,7 @@ function systemPrompt({ memory = '', search = '', oral = false } = {}) {
         'recherches ciblées, pas de lecture de fichiers entiers. Si tu ne trouves pas, dis-le simplement.',
         '', search].join('\n')
       : 'Tu ne peux pas encore lire de fichiers ni agir sur l\'ordinateur : dis-le simplement si on te le demande.',
-    'Tu peux télécharger et installer des logiciels (balises ci-dessus), mais pas encore lancer des logiciels.',
+    'Tu peux télécharger, installer et ouvrir des logiciels, et ouvrir des sites (balises ci-dessus).',
     '',
     memory ? `Ce dont tu te souviens :\n${memory}\n` : 'Tu n\'as encore aucun souvenir de Sacha.',
     '',
@@ -165,7 +173,7 @@ function stripTags(text) {
 
 // Balises oubliées au milieu ou à la fin de la réponse (ça arrive) :
 // on les récupère quand même et on les retire du texte.
-const LOOSE = /\[(projet|retenir|action|installer|telecharger|humeur):([^\]\n]*)\]/gi;
+const LOOSE = /\[(projet|retenir|action|installer|telecharger|lancer|site|humeur):([^\]\n]*)\]/gi;
 function extractLooseTags(text, tags = { retenir: [] }) {
   const out = { ...tags, retenir: [...(tags.retenir || [])] };
   const clean = String(text || '').replace(LOOSE, (_m, key, value) => {

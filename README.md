@@ -90,7 +90,10 @@ Dans la bulle agrandie, le bouton micro à côté de la ligne pour écrire : app
 s'arrête tout seul quand tu te tais (ou rappuie). Ta voix est comprise **sur ton PC** par
 whisper.cpp, puis il te répond **à voix haute** avec Piper et la voix française « Siwis ».
 Il ne parle à voix haute que quand tu lui as parlé au micro ; à l'écrit, il reste muet. À l'oral, il répond
-plus court, comme dans une vraie discussion.
+plus court, comme dans une vraie discussion. Après t'avoir répondu, il t'écoute encore (le
+point rouge s'allume à côté de lui) : réponds-lui simplement. La discussion s'arrête quand
+tu te tais quelques secondes, ou quand tu lui écris. Quand il te pose une question, il
+attend ta réponse avant d'agir.
 
 La première fois, il te demande l'accord de télécharger ces outils gratuits (≈ 290 Mo), en
 te montrant chaque élément, sa taille et son adresse. Ils vont dans
@@ -114,6 +117,14 @@ plus (≈ 57 Mo), après ton accord.
   attend ton clic ; si c'est un installeur (.exe, .msi), il te redemande avant de le lancer.
 
 Rien n'est téléchargé ni installé sans ton clic.
+
+## Il ouvre tes logiciels et tes sites
+
+« Ouvre Spotify », « lance Discord », « mets Netflix » : il cherche le logiciel dans la
+liste de ton menu Démarrer (logiciels classiques et applis du Microsoft Store) et l'ouvre,
+ou il ouvre le site dans ton navigateur par défaut. Ouvrir ne modifie rien, donc il le fait
+directement ; clic droit, **Me demander avant d'ouvrir un logiciel ou un site** si tu
+préfères qu'il demande d'abord.
 
 ## Il peut se modifier lui-même
 
@@ -288,6 +299,7 @@ src/
       activity.js    réactions à ce que tu fais (lunettes, casque, pause, plein écran)
       voix.js        micro (whisper.cpp) et voix (Piper), en local, après ton accord
       installations.js installe (winget) ou télécharge pour toi, après ton accord
+      ouvrir.js      ouvre tes logiciels et des sites dans ton navigateur
   preload.js         pont sécurisé entre la fenêtre et le processus principal
   renderer/
     index.html       dessin en pixel art (généré par tools-dev/dessin-axolotl.py)
@@ -311,7 +323,6 @@ Prévu ensuite :
 - **Aiguillage** : chaque demande passe déjà par `src/main/router.js`, qui n'a pour
   l'instant qu'une destination (`chat`). Claude Code et Cowork s'y ajouteront comme
   destinations, et l'aiguilleur choisira la bonne selon la demande.
-- **actions.js** : il te propose puis lance musique, logiciels ou sites, toujours avec ton accord.
 - **Recherche et diagnostic** : il cherche des fichiers sur ton PC et t'aide à comprendre un problème quand tu le lui demandes.
 
 Réglages enregistrés dans `%APPDATA%\claude-pet\settings.json`.
