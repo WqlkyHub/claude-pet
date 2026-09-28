@@ -88,17 +88,22 @@ la petite ligne rapide, et ses points s'animent quand il t'a répondu.
 
 Dans la bulle agrandie, le bouton micro à côté de la ligne pour écrire : appuie, parle, il
 s'arrête tout seul quand tu te tais (ou rappuie). Ta voix est comprise **sur ton PC** par
-whisper.cpp, puis il te répond **à voix haute** avec Piper et la voix française « Siwis ».
+whisper.cpp, puis il te répond **à voix haute** avec Supertonic 3, une voix naturelle qui
+tourne elle aussi sur ton PC.
 Il ne parle à voix haute que quand tu lui as parlé au micro ; à l'écrit, il reste muet. À l'oral, il répond
 plus court, comme dans une vraie discussion. Après t'avoir répondu, il t'écoute encore (le
 point rouge s'allume à côté de lui) : réponds-lui simplement. La discussion s'arrête quand
 tu te tais quelques secondes, ou quand tu lui écris. Quand il te pose une question, il
 attend ta réponse avant d'agir.
 
-La première fois, il te demande l'accord de télécharger ces outils gratuits (≈ 290 Mo), en
+La première fois, il te demande l'accord de télécharger ces outils gratuits (≈ 350 Mo), en
 te montrant chaque élément, sa taille et son adresse. Ils vont dans
 `%APPDATA%\claude-pet\voix\` et marchent ensuite sans internet. Clic droit, **Voix** pour
 ouvrir ce dossier ou tout supprimer.
+
+**Choisir sa voix** : clic droit, **Voix**, **Choisir ma voix** : 10 voix (5 féminines,
+5 masculines), il te fait entendre chacune quand tu la choisis. **Voix de petite créature**
+la rend plus aiguë. L'ancienne voix Piper reste disponible dans la même liste.
 
 **L'appeler sans cliquer** : clic droit, **Voix**, **M'appeler « hey Axo »**. Dis « hey Axo »
 (il t'écoute) ou « dis Axo, quelle heure est-il ? » (il répond directement). Le micro reste
@@ -297,7 +302,7 @@ src/
       chat.js        discussion avec Claude, reliée à l'aiguilleur et aux humeurs
       quota.js       fatigue et évolution selon ton quota Claude
       activity.js    réactions à ce que tu fais (lunettes, casque, pause, plein écran)
-      voix.js        micro (whisper.cpp) et voix (Piper), en local, après ton accord
+      voix.js        micro (whisper.cpp) et voix (Supertonic ou Piper), en local, après ton accord
       installations.js installe (winget) ou télécharge pour toi, après ton accord
       ouvrir.js      ouvre tes logiciels et des sites dans ton navigateur
   preload.js         pont sécurisé entre la fenêtre et le processus principal

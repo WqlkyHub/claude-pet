@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.9.0",
+    "date": "2026-09-28",
+    "texte": "une nouvelle voix bien plus naturelle (Supertonic 3, sur ton PC) : choisis-la parmi 10 dans clic droit, Voix, Choisir ma voix."
+  },
+  {
+    "version": "0.9.0",
+    "date": "2026-09-28",
+    "texte": "option « Voix de petite créature » pour une voix plus aiguë."
+  },
+  {
     "version": "0.8.0",
     "date": "2026-09-28",
     "texte": "une vraie discussion à voix haute : après t'avoir répondu, je t'écoute encore, jusqu'à ce que tu te taises."

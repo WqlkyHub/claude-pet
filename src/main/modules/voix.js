@@ -2,11 +2,12 @@
 // Tout se passe sur ton PC, gratuitement, sans rien envoyer ailleurs que ta
 // question à Claude (comme quand tu l'écris) :
 //   - ta voix devient du texte avec whisper.cpp (modèle « small », en français) ;
-//   - sa réponse devient une voix avec Piper (voix française « Siwis »).
+//   - sa réponse devient une voix avec Supertonic 3 (10 voix au choix, menu
+//     « Voix »), ou avec l'ancienne voix Piper « Siwis » si tu la préfères.
 // Il ne répond à voix haute que quand tu lui as parlé au micro.
 // Option (menu « Voix ») : l'appeler « hey Axo » ou « dis Axo », sans cliquer.
 //
-// Ces deux outils (≈ 290 Mo en tout) ne sont téléchargés qu'une fois, la
+// Ces outils (≈ 350 Mo en tout) ne sont téléchargés qu'une fois, la
 // première fois que tu appuies sur le micro, et seulement après ton accord :
 // il te montre exactement quoi, d'où, et où ça va. Tout est rangé dans
 // %APPDATA%\claude-pet\voix\ ; menu « Voix » → « Supprimer » pour tout enlever.
@@ -17,7 +18,7 @@ const { spawn } = require('child_process');
 const { app, dialog, ipcMain, net, session, BrowserWindow, shell } = require('electron');
 const update = require('../update');
 
-const PARTS = [
+const EAR = [
   {
     id: 'whisper',
     nom: 'whisper.cpp, pour comprendre ta voix (programme)',
@@ -30,6 +31,34 @@ const PARTS = [
     url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin',
     taille: 190, file: 'ggml-small-q5_1.bin', check: 'ggml-small-q5_1.bin',
   },
+];
+
+// Supertonic 3 tourne avec sherpa-onnx (un programme, sans Python).
+const SHERPA = process.platform === 'win32'
+  ? 'sherpa-onnx-v1.13.8-win-x64-shared-MT-Release' : 'sherpa-onnx-v1.13.8-linux-x64-shared';
+const SUPERTONIC = 'sherpa-onnx-supertonic-3-tts-int8-2026-05-11';
+const SUPERTONIC_VOICES = [
+  'Féminine 1, la plus aiguë', 'Féminine 2', 'Féminine 3', 'Féminine 4', 'Féminine 5, plus posée',
+  'Masculine 1, la plus claire', 'Masculine 2, grave', 'Masculine 3, grave', 'Masculine 4', 'Masculine 5, la plus grave',
+];
+
+const VOICES = {
+  supertonic: [
+    {
+      id: 'sherpa',
+      nom: 'sherpa-onnx, pour parler (programme)',
+      url: `https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/${SHERPA}.tar.bz2`,
+      taille: 25, file: 'sherpa.tar.bz2', unzipTo: '.',
+      check: path.join(SHERPA, 'bin', `sherpa-onnx-offline-tts${process.platform === 'win32' ? '.exe' : ''}`),
+    },
+    {
+      id: 'supertonic',
+      nom: 'voix Supertonic 3 (10 voix, dont le français)',
+      url: `https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${SUPERTONIC}.tar.bz2`,
+      taille: 129, file: 'supertonic.tar.bz2', unzipTo: '.', check: path.join(SUPERTONIC, 'voice.bin'),
+    },
+  ],
+  piper: [
   {
     id: 'piper',
     nom: 'Piper, pour parler (programme)',
@@ -43,7 +72,8 @@ const PARTS = [
     taille: 63, file: 'fr_FR-siwis-medium.onnx', check: 'fr_FR-siwis-medium.onnx',
     extra: 'https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json',
   },
-];
+  ],
+};
 
 // Pour l'appel « hey Axo » : un modèle plus léger et plus rapide, qui ne sert
 // qu'à reconnaître son nom. Téléchargé seulement si tu actives l'option.
@@ -73,7 +103,21 @@ function matchWake(text) {
 const FAKE = process.env.CLAUDE_PET_VOICE_FAKE === '1'; // tests : pas de vrais outils
 
 function dir() { return path.join(app.getPath('userData'), 'voix'); }
-const missing = (parts = PARTS) => (FAKE ? [] : parts.filter((p) => !fs.existsSync(path.join(dir(), p.check))));
+const has = (p) => fs.existsSync(path.join(dir(), p.check));
+const missing = (parts) => (FAKE ? [] : parts.filter((p) => !has(p)));
+
+// Décompresse un .zip ou un .tar.bz2.
+async function extract(file, dest) {
+  if (file.endsWith('.tar.bz2') && process.platform !== 'win32') {
+    await new Promise((resolve, reject) => {
+      const t = spawn('tar', ['-xjf', file, '-C', dest], { stdio: 'ignore' });
+      t.on('error', reject);
+      t.on('close', (c) => (c === 0 ? resolve() : reject(new Error(`tar a échoué (${c})`))));
+    });
+    return;
+  }
+  await update.unzip(file, dest); // Windows : tar.exe lit aussi les .tar.bz2
+}
 
 async function download(url, dest, onProgress) {
   const res = await net.fetch(url);
@@ -94,9 +138,9 @@ async function download(url, dest, onProgress) {
   fs.renameSync(tmp, dest);
 }
 
-function exec(cmd, args, { input, cwd } = {}) {
+function exec(cmd, args, { input, cwd, env } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(cmd, args, { cwd, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
     child.stdout.setEncoding('utf8');
@@ -130,15 +174,17 @@ module.exports = {
     session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'media');
 
     let installing = null;
+    const engine = () => (pet.settings.get('voiceEngine', 'supertonic') === 'piper' ? 'piper' : 'supertonic');
+    const needed = ({ wake = false } = {}) => [...EAR, ...VOICES[engine()], ...(wake ? [WAKE_PART] : [])];
 
     // S'assure que les outils sont là ; sinon demande ton accord et les télécharge.
-    async function ensure({ wake = false } = {}) {
-      const todo = missing(wake ? [...PARTS, WAKE_PART] : PARTS);
+    async function ensure({ wake = false, voiceOnly = false } = {}) {
+      const todo = missing(needed({ wake }));
       if (!todo.length) return true;
       if (installing) return installing;
       const win = BrowserWindow.getAllWindows()[0];
       const total = todo.reduce((s, p) => s + p.taille, 0);
-      const why = wake ? 'Pour que tu puisses m\'appeler « hey Axo » et me parler' : 'Pour t\'écouter et te répondre à voix haute';
+      const why = voiceOnly ? 'Pour ma nouvelle voix' : wake ? 'Pour que tu puisses m\'appeler « hey Axo » et me parler' : 'Pour t\'écouter et te répondre à voix haute';
       const { response } = await dialog.showMessageBox(win, {
         type: 'question',
         title: 'Claude Pet demande ton accord',
@@ -165,7 +211,7 @@ module.exports = {
             if (p.extra) await download(p.extra, path.join(dir(), path.basename(p.extra)), () => {});
             if (p.unzipTo) {
               fs.mkdirSync(path.join(dir(), p.unzipTo), { recursive: true });
-              await update.unzip(dest, path.join(dir(), p.unzipTo));
+              await extract(dest, path.join(dir(), p.unzipTo));
               fs.rmSync(dest, { force: true });
             }
             done += p.taille;
@@ -188,14 +234,16 @@ module.exports = {
     // Appel « hey Axo » : le micro reste ouvert, mais seules tes phrases courtes
     // sont écoutées, sur ton PC, pour y chercher son nom. Rien n'est gardé.
     const wakeOn = () => pet.settings.get('wakeWord', false);
-    const sendWake = () => pet.send({ type: 'wake-word', on: Boolean(wakeOn() && !missing([...PARTS, WAKE_PART]).length) });
+    const sendWake = () => pet.send({ type: 'wake-word', on: Boolean(wakeOn() && !missing(needed({ wake: true })).length) });
     async function setWake(on) {
       if (on && !(await ensure({ wake: true }))) { pet.settings.set('wakeWord', false); sendWake(); return; }
       pet.settings.set('wakeWord', on);
       sendWake();
       pet.say(on ? 'Appelle-moi « hey Axo » ou « dis Axo », je t\'écoute !' : 'D\'accord, je n\'écoute plus mon nom.', { duration: 5000 });
     }
-    pet.bus.once('ready', () => setTimeout(sendWake, 1500));
+    const cute = () => pet.settings.get('voiceCute', false);
+    const sendStyle = () => pet.send({ type: 'voice-style', cute: cute() });
+    pet.bus.once('ready', () => setTimeout(() => { sendWake(); sendStyle(); }, 1500));
 
     ipcMain.handle('voice:wake-check', async (_e, wav) => {
       if (!wakeOn()) return { hit: false, reste: '' };
@@ -229,25 +277,77 @@ module.exports = {
     });
 
     // Texte → sa voix (WAV).
+    async function synthesize(text, out) {
+      if (engine() === 'piper') {
+        const piper = path.join(dir(), 'piper', 'piper.exe');
+        await exec(piper, ['--model', path.join(dir(), 'fr_FR-siwis-medium.onnx'), '--output_file', out,
+          '--sentence_silence', '0.2', '--length_scale', '0.9'], { input: `${text}\n`, cwd: path.join(dir(), 'piper') });
+        return;
+      }
+      const m = (f) => path.join(dir(), SUPERTONIC, f);
+      const bin = path.join(dir(), SHERPA, 'bin');
+      const sid = Math.max(0, Math.min(9, Number(pet.settings.get('supertonicVoice', 0)) || 0));
+      await exec(path.join(bin, VOICES.supertonic[0].check.split(path.sep).pop()), [
+        `--supertonic-duration-predictor=${m('duration_predictor.int8.onnx')}`,
+        `--supertonic-text-encoder=${m('text_encoder.int8.onnx')}`,
+        `--supertonic-vector-estimator=${m('vector_estimator.int8.onnx')}`,
+        `--supertonic-vocoder=${m('vocoder.int8.onnx')}`,
+        `--supertonic-tts-json=${m('tts.json')}`,
+        `--supertonic-unicode-indexer=${m('unicode_indexer.bin')}`,
+        `--supertonic-voice-style=${m('voice.bin')}`,
+        '--lang=fr', `--sid=${sid}`, '--speed=1.1', `--num-threads=${Math.min(4, os.cpus().length || 2)}`,
+        `--output-filename=${out}`, text,
+      ], { cwd: bin, env: process.platform === 'win32' ? undefined : { ...process.env, LD_LIBRARY_PATH: path.join(dir(), SHERPA, 'lib') } });
+    }
+
     ipcMain.handle('voice:speak', async (_e, text) => {
       const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 1500);
       if (!clean) return null;
-      if (FAKE) return fakeWav(clean);
+      if (FAKE && !VOICES[engine()].every(has)) return fakeWav(clean);
       const file = path.join(os.tmpdir(), `claude-pet-voix-${Date.now()}.wav`);
       try {
-        const piper = path.join(dir(), 'piper', 'piper.exe');
-        await exec(piper, ['--model', path.join(dir(), 'fr_FR-siwis-medium.onnx'), '--output_file', file, '--sentence_silence', '0.2', '--length_scale', '0.9'],
-          { input: `${clean}\n`, cwd: path.join(dir(), 'piper') });
+        await synthesize(clean, file);
         return fs.readFileSync(file);
       } finally {
         fs.rmSync(file, { force: true });
       }
     });
 
+    // Changer de voix : télécharge ce qu'il faut (après ton accord), puis te la fait entendre.
+    async function tryVoice(changes) {
+      const before = { voiceEngine: engine(), supertonicVoice: pet.settings.get('supertonicVoice', 0) };
+      for (const [k, v] of Object.entries(changes)) pet.settings.set(k, v);
+      if (!missing(VOICES[engine()]).length || await ensure({ voiceOnly: true })) {
+        pet.send({ type: 'voice-sample', text: 'Coucou ! C\'est moi, ton petit compagnon. Tu aimes ma nouvelle voix ?' });
+      } else {
+        for (const [k, v] of Object.entries(before)) pet.settings.set(k, v);
+      }
+    }
+
     pet.addMenuItems(() => [{
       label: 'Voix',
       submenu: [
-        { label: missing().length ? 'Voix : pas encore téléchargée (appuie sur le micro)' : 'Voix : prête', enabled: false },
+        { label: missing(needed()).length ? 'Voix : pas encore téléchargée (appuie sur le micro)' : 'Voix : prête', enabled: false },
+        {
+          label: 'Choisir ma voix (je te la fais entendre)',
+          submenu: [
+            ...SUPERTONIC_VOICES.map((nom, i) => ({
+              label: nom, type: 'radio',
+              checked: engine() === 'supertonic' && Number(pet.settings.get('supertonicVoice', 0)) === i,
+              click: () => tryVoice({ voiceEngine: 'supertonic', supertonicVoice: i }),
+            })),
+            { type: 'separator' },
+            { label: 'Ancienne voix (Piper « Siwis »)', type: 'radio', checked: engine() === 'piper', click: () => tryVoice({ voiceEngine: 'piper' }) },
+          ],
+        },
+        {
+          label: 'Voix de petite créature (plus aiguë)', type: 'checkbox', checked: cute(),
+          click: (item) => {
+            pet.settings.set('voiceCute', item.checked);
+            sendStyle();
+            pet.send({ type: 'voice-sample', text: item.checked ? 'Et comme ça, je suis plus mignon ?' : 'Je reprends ma voix normale.' });
+          },
+        },
         {
           label: 'M\'appeler « hey Axo » (micro toujours ouvert)', type: 'checkbox', checked: wakeOn(),
           click: (item) => setWake(item.checked),
@@ -259,7 +359,7 @@ module.exports = {
           click: async () => {
             const win = BrowserWindow.getAllWindows()[0];
             const { response } = await dialog.showMessageBox(win, {
-              type: 'question', title: 'Claude Pet demande ton accord', message: 'Je supprime ma voix et la reconnaissance vocale (≈ 290 Mo) ?',
+              type: 'question', title: 'Claude Pet demande ton accord', message: 'Je supprime ma voix et la reconnaissance vocale ?',
               detail: dir(), buttons: ['Supprimer', 'Annuler'], defaultId: 1, cancelId: 1, noLink: true,
             });
             if (response !== 0) return;

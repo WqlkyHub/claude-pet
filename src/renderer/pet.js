@@ -593,7 +593,7 @@
   // ------------------------------------------------------------------
 
   const micBtn = document.getElementById('talk-mic');
-  const voice = { rec: null, speakFor: null, audio: null, convo: false };
+  const voice = { rec: null, speakFor: null, audio: null, convo: false, cute: false };
 
   function wavFrom(chunks, rate) {
     const n = chunks.reduce((a, c) => a + c.length, 0);
@@ -715,6 +715,7 @@
       if (!wav) { continueConvo(); return; }
       const url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
       const audio = new Audio(url);
+      if (voice.cute) { audio.preservesPitch = false; audio.playbackRate = 1.12; } // plus aiguë, comme une petite créature
       voice.audio = audio;
       petEl.classList.add('speaking');
       const done = () => { petEl.classList.remove('speaking'); URL.revokeObjectURL(url); if (voice.audio === audio) voice.audio = null; };
@@ -1034,6 +1035,8 @@
       case 'chat-error': onChatError(cmd); break;
       case 'voice-status': setVoiceStatus(cmd.status); break;
       case 'wake-word': setWakeWord(cmd.on); break;
+      case 'voice-style': voice.cute = Boolean(cmd.cute); break;
+      case 'voice-sample': voice.convo = false; say(cmd.text, 5000); speakAloud(cmd.text); break;
       case 'gear': setGear(cmd.items); break;
       case 'groove': petEl.classList.toggle('grooving', Boolean(cmd.on)); break;
       case 'notes': notes(); break;
